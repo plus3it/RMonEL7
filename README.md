@@ -24,3 +24,8 @@ The expected deployment-model is as follows:
 Scaling and availability is furnished primarily through native AWS services' capabilities: RDS an EFS both have built-in enhancedlreliability/availability and scalability functionality. Clustering of RedMine nodes (EC2 nodes) is not supported with this tool-set: use of AutoScaling Groups are the expected method for improving the baseline EC2-layer's availability.
 
 Data protection is currently only provided within the RDS context. EFS is generally durable but is not further enhanced via backup tools in the current deployment automation tool-set.
+
+
+## Contribution and Other Guidelines
+
+Please see the guidlines in the [docs](docs) directory.
