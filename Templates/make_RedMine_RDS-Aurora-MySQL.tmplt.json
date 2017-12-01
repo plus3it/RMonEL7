@@ -3,67 +3,25 @@
   "Conditions": {
     "AtLeastThreeInstances": {
       "Fn::Or": [
-        {
-          "Fn::Equals": [
-            {
-              "Ref": "InstanceCount"
-            },
-            "3"
-          ]
-        },
-        {
-          "Fn::Equals": [
-            {
-              "Ref": "InstanceCount"
-            },
-            "4"
-          ]
-        }
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "3" ] },
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "4" ] }
       ]
     },
     "AtLeastTwoInstances": {
       "Fn::Or": [
-        {
-          "Fn::Equals": [
-            {
-              "Ref": "InstanceCount"
-            },
-            "2"
-          ]
-        },
-        {
-          "Fn::Equals": [
-            {
-              "Ref": "InstanceCount"
-            },
-            "3"
-          ]
-        },
-        {
-          "Fn::Equals": [
-            {
-              "Ref": "InstanceCount"
-            },
-            "4"
-          ]
-        }
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "2" ] },
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "3" ] },
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "4" ] }
       ]
     },
     "FourInstances": {
-      "Fn::Equals": [
-        {
-          "Ref": "InstanceCount"
-        },
-        "4"
-      ]
+      "Fn::Equals": [ { "Ref": "InstanceCount" }, "4" ]
     },
     "OneInstance": {
-      "Fn::Equals": [
-        {
-          "Ref": "InstanceCount"
-        },
-        "1"
-      ]
+      "Fn::Equals": [ { "Ref": "InstanceCount" }, "1" ]
+    },
+    "SetNodeName": {
+      "Fn::Not": [ { "Fn::Equals": [ { "Ref": "DbNodeName" }, "" ] } ]
     }
   },
   "Description": "This template deploys a MySQL-flavored Aurora database to support RedMine.",
@@ -102,13 +60,15 @@
     "DbDataSize": {
       "ConstraintDescription": "Must be between 5GB and 16384GB.",
       "Default": "5",
-      "Description": "(UNUSED) Size in GiB of the RDS table-space to create.",
+      "Description": "Size in GiB of the RDS table-space to create. (UNUSED: present for compatibility-reasons only)",
       "MaxValue": "16384",
       "MinValue": "5",
       "Type": "Number"
     },
     "DbInstanceName": {
       "Description": "Instance-name of the RedMine database.",
+      "MinLength": "4",
+      "MaxLength": "8",
       "Type": "String"
     },
     "DbInstanceType": {
@@ -137,7 +97,7 @@
         "true"
       ],
       "Default": "false",
-      "Description": "(UNUSED) Select whether to create a multi-AZ RDS deployment.",
+      "Description": "Select whether to create a multi-AZ RDS deployment. (UNUSED: present for compatibility-reasons only)",
       "Type": "String"
     },
     "DbNodeName": {
@@ -175,7 +135,7 @@
         "5.5.46"
       ],
       "Default": "5.7.19",
-      "Description": "(UNUSED) The X.Y.Z version of the MySQL database to deploy.",
+      "Description": " The X.Y.Z version of the MySQL database to deploy. (UNUSED: present for compatibility-reasons only)",
       "Type": "String"
     },
     "TargetVPC": {
@@ -187,7 +147,7 @@
   "Resources": {
     "RDSDBParameterGroup": {
       "Properties": {
-        "Description": "CloudFormation Sample Aurora Parameter Group",
+        "Description": "Parameter Group to apply to the Aurora DB-cluster.",
         "Family": "aurora5.6",
         "Parameters": {
           "sql_mode": "IGNORE_SPACE"
@@ -198,232 +158,161 @@
     "RDSdbCluster": {
       "Properties": {
         "BackupRetentionPeriod": "7",
-        "DBSubnetGroupName": {
-          "Ref": "dbSubnetGroup"
-        },
-        "DatabaseName": "MyDatabase",
+        "DBSubnetGroupName": { "Ref": "RDSdbSubnetGroup" },
+        "DatabaseName": { "Ref": "DbInstanceName" },
         "Engine": "aurora",
-        "MasterUserPassword": {
-          "Ref": "DbAdminPass"
-        },
-        "MasterUsername": {
-          "Ref": "DbAdminName"
-        },
+        "MasterUserPassword": { "Ref": "DbAdminPass" },
+        "MasterUsername": { "Ref": "DbAdminName" },
         "Port": "3306",
         "PreferredBackupWindow": "04:30-06:30",
         "PreferredMaintenanceWindow": "tue:07:00-tue:09:00",
         "Tags": [
           {
             "Key": "Description",
-            "Value": "RedMine MySQL-flavored Aurora back-end database"
+            "Value": "RedMine MySQL-flavored Aurora back-end database cluster"
           }
         ],
-        "VpcSecurityGroupIds": [
-          {
-            "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-          }
-        ]
+        "VpcSecurityGroupIds": { "Ref": "DbSecurityGroup" }
       },
       "Type": "AWS::RDS::DBCluster"
     },
     "RDSdbInstance0": {
       "Properties": {
-        "DBClusterIdentifier": {
-          "Ref": "RDSdbCluster"
+        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBInstanceIdentifier": {
+          "Fn::If": [
+            "SetNodeName",
+            {
+              "Fn::Join": [
+                "-",
+                [
+                  { "Ref": "DbNodeName" },
+                  "n0"
+                ]
+              ]
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
         },
-        "DBInstanceClass": {
-          "Ref": "DbInstanceType"
-        },
-        "DBParameterGroupName": {
-          "Ref": "RDSDBParameterGroup"
-        },
-        "DBSubnetGroupName": {
-          "Ref": "dbSubnetGroup"
-        },
+        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
+        "DBSubnetGroupName": { "Ref": "RDSdbSubnetGroup" },
         "Engine": "aurora",
-        "PubliclyAccessible": "false"
+        "PubliclyAccessible": "false",
+        "Tags": [
+          {
+            "Key": "Description",
+            "Value": "RedMine MySQL-flavored Aurora back-end database cluster-node"
+          }
+        ]
       },
       "Type": "AWS::RDS::DBInstance"
     },
     "RDSdbInstance1": {
       "Condition": "AtLeastTwoInstances",
       "Properties": {
-        "DBClusterIdentifier": {
-          "Ref": "RDSdbCluster"
+        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBInstanceIdentifier": {
+          "Fn::If": [
+            "SetNodeName",
+            {
+              "Fn::Join": [
+                "-",
+                [
+                  { "Ref": "DbNodeName" },
+                  "n1"
+                ]
+              ]
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
         },
-        "DBInstanceClass": {
-          "Ref": "DbInstanceType"
-        },
-        "DBParameterGroupName": {
-          "Ref": "RDSDBParameterGroup"
-        },
-        "DBSubnetGroupName": {
-          "Ref": "dbSubnetGroup"
-        },
+        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
+        "DBSubnetGroupName": { "Ref": "RDSdbSubnetGroup" },
         "Engine": "aurora",
-        "PubliclyAccessible": "false"
+        "PubliclyAccessible": "false",
+        "Tags": [
+          {
+            "Key": "Description",
+            "Value": "RedMine MySQL-flavored Aurora back-end database cluster-node"
+          }
+        ]
       },
       "Type": "AWS::RDS::DBInstance"
     },
     "RDSdbInstance2": {
       "Condition": "AtLeastThreeInstances",
       "Properties": {
-        "DBClusterIdentifier": {
-          "Ref": "RDSdbCluster"
+        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBInstanceIdentifier": {
+          "Fn::If": [
+            "SetNodeName",
+            {
+              "Fn::Join": [
+                "-",
+                [
+                  { "Ref": "DbNodeName" },
+                  "n2"
+                ]
+              ]
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
         },
-        "DBInstanceClass": {
-          "Ref": "DbInstanceType"
-        },
-        "DBParameterGroupName": {
-          "Ref": "RDSDBParameterGroup"
-        },
-        "DBSubnetGroupName": {
-          "Ref": "dbSubnetGroup"
-        },
+        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
+        "DBSubnetGroupName": { "Ref": "RDSdbSubnetGroup" },
         "Engine": "aurora",
-        "PubliclyAccessible": "false"
+        "PubliclyAccessible": "false",
+        "Tags": [
+          {
+            "Key": "Description",
+            "Value": "RedMine MySQL-flavored Aurora back-end database cluster-node"
+          }
+        ]
       },
       "Type": "AWS::RDS::DBInstance"
     },
     "RDSdbInstance3": {
       "Condition": "FourInstances",
       "Properties": {
-        "DBClusterIdentifier": {
-          "Ref": "RDSdbCluster"
+        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBInstanceIdentifier": {
+          "Fn::If": [
+            "SetNodeName",
+            {
+              "Fn::Join": [
+                "-",
+                [
+                  { "Ref": "DbNodeName" },
+                  "n3"
+                ]
+              ]
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
         },
-        "DBInstanceClass": {
-          "Ref": "DbInstanceType"
-        },
-        "DBParameterGroupName": {
-          "Ref": "RDSDBParameterGroup"
-        },
-        "DBSubnetGroupName": {
-          "Ref": "dbSubnetGroup"
-        },
+        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
+        "DBSubnetGroupName": { "Ref": "RDSdbSubnetGroup" },
         "Engine": "aurora",
-        "PubliclyAccessible": "false"
-      },
-      "Type": "AWS::RDS::DBInstance"
-    },
-    "dbSubnetGroup": {
-      "Properties": {
-        "DBSubnetGroupDescription": "Subnets available for the  DB Instance",
-        "SubnetIds": {
-          "Ref": "DbSubnets"
-        }
-      },
-      "Type": "AWS::RDS::DBSubnetGroup"
-    },
-    "dbsubnetdefaultvpc5067c234": {
-      "Properties": {
-        "DBSubnetGroupDescription": "Created from the  Management Console",
-        "SubnetIds": [
-          "subnet-8136d3f7",
-          "subnet-72fdd159",
-          "subnet-bffcd094",
-          "subnet-fc142ba5",
-          "subnet-f930d58f",
-          "subnet-de122d87"
-        ],
+        "PubliclyAccessible": "false",
         "Tags": [
           {
-            "Key": "Cld brokering Grp",
-            "Value": "Internal Dev"
+            "Key": "Description",
+            "Value": "RedMine MySQL-flavored Aurora back-end database cluster-node"
           }
         ]
       },
+      "Type": "AWS::RDS::DBInstance"
+    },
+    "RDSdbSubnetGroup": {
+      "Properties": {
+        "DBSubnetGroupDescription": "Subnets available for the RDS DB Instance to be built into.",
+        "SubnetIds": { "Ref": "DbSubnets" }
+      },
       "Type": "AWS::RDS::DBSubnetGroup"
-    },
-    "egress1": {
-      "Properties": {
-        "CidrIp": "0.0.0.0/0",
-        "GroupId": {
-          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-        },
-        "IpProtocol": "-1"
-      },
-      "Type": "AWS::EC2::SecurityGroupEgress"
-    },
-    "ingress1": {
-      "Properties": {
-        "CidrIp": "10.0.0.0/24",
-        "FromPort": "1521",
-        "GroupId": {
-          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-        },
-        "IpProtocol": "tcp",
-        "ToPort": "1521"
-      },
-      "Type": "AWS::EC2::SecurityGroupIngress"
-    },
-    "ingress2": {
-      "Properties": {
-        "CidrIp": "66.26.171.110/32",
-        "FromPort": "1521",
-        "GroupId": {
-          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-        },
-        "IpProtocol": "tcp",
-        "ToPort": "1521"
-      },
-      "Type": "AWS::EC2::SecurityGroupIngress"
-    },
-    "ingress3": {
-      "Properties": {
-        "CidrIp": "69.250.253.193/32",
-        "FromPort": "1521",
-        "GroupId": {
-          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-        },
-        "IpProtocol": "tcp",
-        "ToPort": "1521"
-      },
-      "Type": "AWS::EC2::SecurityGroupIngress"
-    },
-    "ingress4": {
-      "Properties": {
-        "CidrIp": "10.0.0.0/24",
-        "FromPort": "3306",
-        "GroupId": {
-          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-        },
-        "IpProtocol": "tcp",
-        "ToPort": "3306"
-      },
-      "Type": "AWS::EC2::SecurityGroupIngress"
-    },
-    "ingress5": {
-      "Properties": {
-        "CidrIp": "66.26.171.110/32",
-        "FromPort": "3306",
-        "GroupId": {
-          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-        },
-        "IpProtocol": "tcp",
-        "ToPort": "3306"
-      },
-      "Type": "AWS::EC2::SecurityGroupIngress"
-    },
-    "ingress6": {
-      "Properties": {
-        "CidrIp": "69.250.253.193/32",
-        "FromPort": "3306",
-        "GroupId": {
-          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
-        },
-        "IpProtocol": "tcp",
-        "ToPort": "3306"
-      },
-      "Type": "AWS::EC2::SecurityGroupIngress"
-    },
-    "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2": {
-      "Properties": {
-        "GroupDescription": "Security group for DMS Demo  DB Instances.",
-        "VpcId": {
-          "Ref": "TargetVPC"
-        }
-      },
-      "Type": "AWS::EC2::SecurityGroup"
     }
   }
 }
