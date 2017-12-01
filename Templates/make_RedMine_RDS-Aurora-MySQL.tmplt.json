@@ -1,29 +1,68 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Conditions": {
-    "OneInstance": {
-      "Fn::Equals": [
-        { "Ref": "InstanceCount" },
-        "1"
+    "AtLeastThreeInstances": {
+      "Fn::Or": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "InstanceCount"
+            },
+            "3"
+          ]
+        },
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "InstanceCount"
+            },
+            "4"
+          ]
+        }
       ]
     },
     "AtLeastTwoInstances": {
       "Fn::Or": [
-        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "2" ] },
-        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "3" ] },
-        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "4" ] }
-      ]
-    },
-    "AtLeastThreeInstances": {
-      "Fn::Or": [
-        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "3" ] },
-        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "4" ] }
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "InstanceCount"
+            },
+            "2"
+          ]
+        },
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "InstanceCount"
+            },
+            "3"
+          ]
+        },
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "InstanceCount"
+            },
+            "4"
+          ]
+        }
       ]
     },
     "FourInstances": {
       "Fn::Equals": [
-        { "Ref": "InstanceCount" },
+        {
+          "Ref": "InstanceCount"
+        },
         "4"
+      ]
+    },
+    "OneInstance": {
+      "Fn::Equals": [
+        {
+          "Ref": "InstanceCount"
+        },
+        "1"
       ]
     }
   },
@@ -60,6 +99,18 @@
       "NoEcho": "True",
       "Type": "String"
     },
+    "DbDataSize": {
+      "ConstraintDescription": "Must be between 5GB and 16384GB.",
+      "Default": "5",
+      "Description": "(UNUSED) Size in GiB of the RDS table-space to create.",
+      "MaxValue": "16384",
+      "MinValue": "5",
+      "Type": "Number"
+    },
+    "DbInstanceName": {
+      "Description": "Instance-name of the RedMine database.",
+      "Type": "String"
+    },
     "DbInstanceType": {
       "AllowedValues": [
         "db.t2.small",
@@ -80,16 +131,52 @@
       "Description": "Amazon RDS instance type",
       "Type": "String"
     },
-    "HaSvcSubnets": {
-      "Description": "Select three subnets - each from different Availability Zones.",
+    "DbIsMultiAz": {
+      "AllowedValues": [
+        "false",
+        "true"
+      ],
+      "Default": "false",
+      "Description": "(UNUSED) Select whether to create a multi-AZ RDS deployment.",
+      "Type": "String"
+    },
+    "DbNodeName": {
+      "Description": "NodeName of the RedMine database.",
+      "Type": "String"
+    },
+    "DbSecurityGroup": {
+      "Description": "List of security groups to apply to the RDS database.",
+      "Type": "List<AWS::EC2::SecurityGroup::Id>"
+    },
+    "DbSubnets": {
+      "Description": "Select at least two subnets, each in different Availability Zones",
       "Type": "List<AWS::EC2::Subnet::Id>"
     },
     "InstanceCount": {
-      "Description": "Number of cluster-nodes to deploy",
       "Default": "2",
-      "MinValue": "1",
+      "Description": "Number of cluster-nodes to deploy",
       "MaxValue": "4",
+      "MinValue": "1",
       "Type": "Number"
+    },
+    "MysqlVersion": {
+      "AllowedValues": [
+        "5.7.19",
+        "5.7.17",
+        "5.7.16",
+        "5.6.37",
+        "5.6.35",
+        "5.6.34",
+        "5.6.29",
+        "5.6.26",
+        "5.5.57",
+        "5.5.54",
+        "5.5.53",
+        "5.5.46"
+      ],
+      "Default": "5.7.19",
+      "Description": "(UNUSED) The X.Y.Z version of the MySQL database to deploy.",
+      "Type": "String"
     },
     "TargetVPC": {
       "AllowedPattern": "^vpc-[0-9a-f]*$",
@@ -116,8 +203,12 @@
         },
         "DatabaseName": "MyDatabase",
         "Engine": "aurora",
-        "MasterUserPassword": { "Ref": "DbAdminPass" },
-        "MasterUsername": { "Ref": "DbAdminName" },
+        "MasterUserPassword": {
+          "Ref": "DbAdminPass"
+        },
+        "MasterUsername": {
+          "Ref": "DbAdminName"
+        },
         "Port": "3306",
         "PreferredBackupWindow": "04:30-06:30",
         "PreferredMaintenanceWindow": "tue:07:00-tue:09:00",
@@ -140,7 +231,9 @@
         "DBClusterIdentifier": {
           "Ref": "RDSdbCluster"
         },
-        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBInstanceClass": {
+          "Ref": "DbInstanceType"
+        },
         "DBParameterGroupName": {
           "Ref": "RDSDBParameterGroup"
         },
@@ -155,10 +248,18 @@
     "RDSdbInstance1": {
       "Condition": "AtLeastTwoInstances",
       "Properties": {
-        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
-        "DBInstanceClass": { "Ref": "DbInstanceType" },
-        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
-        "DBSubnetGroupName": { "Ref": "dbSubnetGroup" },
+        "DBClusterIdentifier": {
+          "Ref": "RDSdbCluster"
+        },
+        "DBInstanceClass": {
+          "Ref": "DbInstanceType"
+        },
+        "DBParameterGroupName": {
+          "Ref": "RDSDBParameterGroup"
+        },
+        "DBSubnetGroupName": {
+          "Ref": "dbSubnetGroup"
+        },
         "Engine": "aurora",
         "PubliclyAccessible": "false"
       },
@@ -167,10 +268,18 @@
     "RDSdbInstance2": {
       "Condition": "AtLeastThreeInstances",
       "Properties": {
-        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
-        "DBInstanceClass": { "Ref": "DbInstanceType" },
-        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
-        "DBSubnetGroupName": { "Ref": "dbSubnetGroup" },
+        "DBClusterIdentifier": {
+          "Ref": "RDSdbCluster"
+        },
+        "DBInstanceClass": {
+          "Ref": "DbInstanceType"
+        },
+        "DBParameterGroupName": {
+          "Ref": "RDSDBParameterGroup"
+        },
+        "DBSubnetGroupName": {
+          "Ref": "dbSubnetGroup"
+        },
         "Engine": "aurora",
         "PubliclyAccessible": "false"
       },
@@ -179,10 +288,18 @@
     "RDSdbInstance3": {
       "Condition": "FourInstances",
       "Properties": {
-        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
-        "DBInstanceClass": { "Ref": "DbInstanceType" },
-        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
-        "DBSubnetGroupName": { "Ref": "dbSubnetGroup" },
+        "DBClusterIdentifier": {
+          "Ref": "RDSdbCluster"
+        },
+        "DBInstanceClass": {
+          "Ref": "DbInstanceType"
+        },
+        "DBParameterGroupName": {
+          "Ref": "RDSDBParameterGroup"
+        },
+        "DBSubnetGroupName": {
+          "Ref": "dbSubnetGroup"
+        },
         "Engine": "aurora",
         "PubliclyAccessible": "false"
       },
@@ -192,7 +309,7 @@
       "Properties": {
         "DBSubnetGroupDescription": "Subnets available for the  DB Instance",
         "SubnetIds": {
-          "Ref": "HaSvcSubnets"
+          "Ref": "DbSubnets"
         }
       },
       "Type": "AWS::RDS::DBSubnetGroup"
