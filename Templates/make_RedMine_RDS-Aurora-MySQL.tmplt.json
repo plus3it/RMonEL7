@@ -1,0 +1,312 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Conditions": {
+    "OneInstance": {
+      "Fn::Equals": [
+        { "Ref": "InstanceCount" },
+        "1"
+      ]
+    },
+    "AtLeastTwoInstances": {
+      "Fn::Or": [
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "2" ] },
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "3" ] },
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "4" ] }
+      ]
+    },
+    "AtLeastThreeInstances": {
+      "Fn::Or": [
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "3" ] },
+        { "Fn::Equals": [ { "Ref": "InstanceCount" }, "4" ] }
+      ]
+    },
+    "FourInstances": {
+      "Fn::Equals": [
+        { "Ref": "InstanceCount" },
+        "4"
+      ]
+    }
+  },
+  "Description": "This template deploys a MySQL-flavored Aurora database to support RedMine.",
+  "Mappings": {},
+  "Metadata": {},
+  "Outputs": {
+    "RdsEndpointAddressRO": {
+      "Description": " DB's Read-Only endpoint-FQDN.",
+      "Value": {
+        "Fn::GetAtt": [
+          "RDSdbCluster",
+          "Endpoint.Address"
+        ]
+      }
+    },
+    "RdsEndpointAddressRW": {
+      "Description": " DB's Read/Write endpoint-FQDN.",
+      "Value": {
+        "Fn::GetAtt": [
+          "RDSdbCluster",
+          "Endpoint.Address"
+        ]
+      }
+    }
+  },
+  "Parameters": {
+    "DbAdminName": {
+      "Description": "Name of the Artifactory master database-user.",
+      "Type": "String"
+    },
+    "DbAdminPass": {
+      "Description": "Password of the Artifactory master database-user.",
+      "NoEcho": "True",
+      "Type": "String"
+    },
+    "DbInstanceType": {
+      "AllowedValues": [
+        "db.t2.small",
+        "db.t2.medium",
+        "db.r4.large",
+        "db.r4.xlarge",
+        "db.r4.2xlarge",
+        "db.r4.4xlarge",
+        "db.r4.8xlarge",
+        "db.r4.16xlarge",
+        "db.r3.large",
+        "db.r3.xlarge",
+        "db.r3.2xlarge",
+        "db.r3.4xlarge",
+        "db.r3.8xlarge"
+      ],
+      "Default": "db.t2.small",
+      "Description": "Amazon RDS instance type",
+      "Type": "String"
+    },
+    "HaSvcSubnets": {
+      "Description": "Select three subnets - each from different Availability Zones.",
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "InstanceCount": {
+      "Description": "Number of cluster-nodes to deploy",
+      "Default": "2",
+      "MinValue": "1",
+      "MaxValue": "4",
+      "Type": "Number"
+    },
+    "TargetVPC": {
+      "AllowedPattern": "^vpc-[0-9a-f]*$",
+      "Description": "ID of the VPC to deploy GitLab components into.",
+      "Type": "AWS::EC2::VPC::Id"
+    }
+  },
+  "Resources": {
+    "RDSDBParameterGroup": {
+      "Properties": {
+        "Description": "CloudFormation Sample Aurora Parameter Group",
+        "Family": "aurora5.6",
+        "Parameters": {
+          "sql_mode": "IGNORE_SPACE"
+        }
+      },
+      "Type": "AWS::RDS::DBParameterGroup"
+    },
+    "RDSdbCluster": {
+      "Properties": {
+        "BackupRetentionPeriod": "7",
+        "DBSubnetGroupName": {
+          "Ref": "dbSubnetGroup"
+        },
+        "DatabaseName": "MyDatabase",
+        "Engine": "aurora",
+        "MasterUserPassword": { "Ref": "DbAdminPass" },
+        "MasterUsername": { "Ref": "DbAdminName" },
+        "Port": "3306",
+        "PreferredBackupWindow": "04:30-06:30",
+        "PreferredMaintenanceWindow": "tue:07:00-tue:09:00",
+        "Tags": [
+          {
+            "Key": "Description",
+            "Value": "RedMine MySQL-flavored Aurora back-end database"
+          }
+        ],
+        "VpcSecurityGroupIds": [
+          {
+            "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+          }
+        ]
+      },
+      "Type": "AWS::RDS::DBCluster"
+    },
+    "RDSdbInstance0": {
+      "Properties": {
+        "DBClusterIdentifier": {
+          "Ref": "RDSdbCluster"
+        },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBParameterGroupName": {
+          "Ref": "RDSDBParameterGroup"
+        },
+        "DBSubnetGroupName": {
+          "Ref": "dbSubnetGroup"
+        },
+        "Engine": "aurora",
+        "PubliclyAccessible": "false"
+      },
+      "Type": "AWS::RDS::DBInstance"
+    },
+    "RDSdbInstance1": {
+      "Condition": "AtLeastTwoInstances",
+      "Properties": {
+        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
+        "DBSubnetGroupName": { "Ref": "dbSubnetGroup" },
+        "Engine": "aurora",
+        "PubliclyAccessible": "false"
+      },
+      "Type": "AWS::RDS::DBInstance"
+    },
+    "RDSdbInstance2": {
+      "Condition": "AtLeastThreeInstances",
+      "Properties": {
+        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
+        "DBSubnetGroupName": { "Ref": "dbSubnetGroup" },
+        "Engine": "aurora",
+        "PubliclyAccessible": "false"
+      },
+      "Type": "AWS::RDS::DBInstance"
+    },
+    "RDSdbInstance3": {
+      "Condition": "FourInstances",
+      "Properties": {
+        "DBClusterIdentifier": { "Ref": "RDSdbCluster" },
+        "DBInstanceClass": { "Ref": "DbInstanceType" },
+        "DBParameterGroupName": { "Ref": "RDSDBParameterGroup" },
+        "DBSubnetGroupName": { "Ref": "dbSubnetGroup" },
+        "Engine": "aurora",
+        "PubliclyAccessible": "false"
+      },
+      "Type": "AWS::RDS::DBInstance"
+    },
+    "dbSubnetGroup": {
+      "Properties": {
+        "DBSubnetGroupDescription": "Subnets available for the  DB Instance",
+        "SubnetIds": {
+          "Ref": "HaSvcSubnets"
+        }
+      },
+      "Type": "AWS::RDS::DBSubnetGroup"
+    },
+    "dbsubnetdefaultvpc5067c234": {
+      "Properties": {
+        "DBSubnetGroupDescription": "Created from the  Management Console",
+        "SubnetIds": [
+          "subnet-8136d3f7",
+          "subnet-72fdd159",
+          "subnet-bffcd094",
+          "subnet-fc142ba5",
+          "subnet-f930d58f",
+          "subnet-de122d87"
+        ],
+        "Tags": [
+          {
+            "Key": "Cld brokering Grp",
+            "Value": "Internal Dev"
+          }
+        ]
+      },
+      "Type": "AWS::RDS::DBSubnetGroup"
+    },
+    "egress1": {
+      "Properties": {
+        "CidrIp": "0.0.0.0/0",
+        "GroupId": {
+          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+        },
+        "IpProtocol": "-1"
+      },
+      "Type": "AWS::EC2::SecurityGroupEgress"
+    },
+    "ingress1": {
+      "Properties": {
+        "CidrIp": "10.0.0.0/24",
+        "FromPort": "1521",
+        "GroupId": {
+          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "1521"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "ingress2": {
+      "Properties": {
+        "CidrIp": "66.26.171.110/32",
+        "FromPort": "1521",
+        "GroupId": {
+          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "1521"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "ingress3": {
+      "Properties": {
+        "CidrIp": "69.250.253.193/32",
+        "FromPort": "1521",
+        "GroupId": {
+          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "1521"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "ingress4": {
+      "Properties": {
+        "CidrIp": "10.0.0.0/24",
+        "FromPort": "3306",
+        "GroupId": {
+          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "3306"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "ingress5": {
+      "Properties": {
+        "CidrIp": "66.26.171.110/32",
+        "FromPort": "3306",
+        "GroupId": {
+          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "3306"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "ingress6": {
+      "Properties": {
+        "CidrIp": "69.250.253.193/32",
+        "FromPort": "3306",
+        "GroupId": {
+          "Ref": "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2"
+        },
+        "IpProtocol": "tcp",
+        "ToPort": "3306"
+      },
+      "Type": "AWS::EC2::SecurityGroupIngress"
+    },
+    "sgDMSMigrationsmyVPCSecurityGroup109KD2HOVAEU2": {
+      "Properties": {
+        "GroupDescription": "Security group for DMS Demo  DB Instances.",
+        "VpcId": {
+          "Ref": "TargetVPC"
+        }
+      },
+      "Type": "AWS::EC2::SecurityGroup"
+    }
+  }
+}
