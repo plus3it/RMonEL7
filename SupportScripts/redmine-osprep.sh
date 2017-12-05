@@ -2,7 +2,7 @@
 # shellcheck disable=SC2015
 #
 # Script to handle preparation of the instance for installing
-# and configuring GitLab
+# and configuring RedMine
 #
 #################################################################
 PROGNAME=$(basename "${0}")
