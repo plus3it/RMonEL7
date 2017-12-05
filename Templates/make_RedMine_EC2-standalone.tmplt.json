@@ -277,6 +277,11 @@
       "Description": "URL to the PyPi Index",
       "Type": "String"
     },
+    "RedminePrepScript": {
+      "Description": "URL of the script that preps the OS to host RedMine",
+      "Type": "String",
+      "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$"
+    },
     "SecurityGroupIds": {
       "Description": "List of security groups to apply to the instance",
       "Type": "List<AWS::EC2::SecurityGroup::Id>"
@@ -404,6 +409,7 @@
               "admkey-install",
               "watchmaker-install",
               "watchmaker-launch",
+              "os-prep",
               {
                 "Fn::If": [
                   "UseCfnAppInstaller",
@@ -652,6 +658,27 @@
                     "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
                   ]
                 }
+              }
+            }
+          },
+          "os-prep": {
+            "commands": {
+              "1-get-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedminePrepScript" },
+                      " -o redmine-osprep.sh"
+                    ]
+                  ]
+                }
+              },
+              "2-run-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": "bash -xe redmine-osprep.sh"
               }
             }
           },
