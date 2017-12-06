@@ -277,6 +277,16 @@
       "Description": "URL to the PyPi Index",
       "Type": "String"
     },
+    "RedmineHelperLocation": {
+      "Description": "URL-root of location hosting ancilllary install files.",
+      "Type": "String",
+      "AllowedPattern": "^http://.*$|^https://.*$|^s3://.*$"
+    },
+    "RedmineAppinstallScript": {
+      "Description": "URL of the script that installs/configures RedMine",
+      "Type": "String",
+      "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$"
+    },
     "RedminePrepScript": {
       "Description": "URL of the script that preps the OS to host RedMine",
       "Type": "String",
@@ -497,10 +507,13 @@
                        { "Ref": "DbFqdn" },
                        "\n",
                        "RM_OS_PREP_SCRIPT=",
-                       { "Ref": "RedMineOsPrepUrl" },
+                       { "Ref": "RedminePrepScript" },
                        "\n",
                        "RM_APP_PREP_SCRIPT=",
-                       { "Ref": "RedMineAppPrepUrl" },
+                       { "Ref": "RedmineAppinstallScript" },
+                       "\n",
+                       "RM_HELPER_FILE_ROOT_URI",
+                       { "Ref": "RedmineHelperLocation" },
                        "\n",
                        "RM_BIN_INSTALLER=",
                        { "Ref": "RedMineBinaryInstallerUrl" },
@@ -658,6 +671,27 @@
                     "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
                   ]
                 }
+              }
+            }
+          },
+          "app-install": {
+            "commands": {
+              "1-get-app-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedmineAppinstallScript" },
+                      " -o redmine-appinstall.sh"
+                    ]
+                  ]
+                }
+              },
+              "2-run-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": "bash -xe redmine-appinstall.sh"
               }
             }
           },
