@@ -410,6 +410,9 @@
           "RedMineProxyFqdn": { "Ref": "RedMineProxyFqdn" },
           "RedMineSharePath": { "Ref": "RedMineSharePath" },
           "RedMineShareType": "nfs",
+	  "RedmineAppinstallScript": { "Ref": "RedmineAppinstallScript" },
+	  "RedminePrepScript": { "Ref": "RedminePrepScript" },
+	  "RedmineHelperLocation": { "Ref": "RedmineHelperLocation" },
           "SecurityGroupIds": {
             "Fn::Join": [
               ",",
