@@ -29,7 +29,16 @@
   "Metadata": {},
   "Outputs": {
     "RdsEndpointAddressRO": {
-      "Description": " DB's Read-Only endpoint-FQDN.",
+      "Description": "DB's Read-Only endpoint-FQDN.",
+      "Value": {
+        "Fn::GetAtt": [
+          "RDSdbCluster",
+          "ReadEndpoint.Address"
+        ]
+      }
+    },
+    "RdsEndpointAddressRW": {
+      "Description": "DB's Read/Write endpoint-FQDN.",
       "Value": {
         "Fn::GetAtt": [
           "RDSdbCluster",
@@ -37,8 +46,8 @@
         ]
       }
     },
-    "RdsEndpointAddressRW": {
-      "Description": " DB's Read/Write endpoint-FQDN.",
+    "RdsEndpointAddress": {
+      "Description": "DB's (compatibility) endpoint-FQDN.",
       "Value": {
         "Fn::GetAtt": [
           "RDSdbCluster",
