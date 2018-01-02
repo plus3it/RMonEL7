@@ -512,7 +512,7 @@
                        "RM_APP_PREP_SCRIPT=",
                        { "Ref": "RedmineAppinstallScript" },
                        "\n",
-                       "RM_HELPER_FILE_ROOT_URI",
+                       "RM_HELPER_FILE_ROOT_URI=",
                        { "Ref": "RedmineHelperLocation" },
                        "\n",
                        "RM_BIN_INSTALLER=",
