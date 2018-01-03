@@ -18,8 +18,6 @@ FWSVCS=(
       http
       https
    )
-SHARESRVR=$(echo "${RM_PERSISTENT_SHARE_PATH}" | cut -d ':' -f 1)
-SHAREROOT=$(echo "${RM_PERSISTENT_SHARE_PATH}" | cut -d ':' -f 2)
 PERSISTED=(
       files
       Repositories
@@ -83,7 +81,7 @@ function ShareReady {
    local SHARESRVR
    local SHAREROOT
 
-   if [[ $(echo | grep -q :)$? -eq 0 ]]
+   if [[ $(echo "${RM_PERSISTENT_SHARE_PATH}" | grep -q :)$? -eq 0 ]]
    then
       SHARESRVR=$(echo "${RM_PERSISTENT_SHARE_PATH}" | cut -d ':' -f 1)
       SHAREROOT=$(echo "${RM_PERSISTENT_SHARE_PATH}" | cut -d ':' -f 2)
