@@ -138,9 +138,8 @@
       "Description": "URL to script that installs RedMine to the EC2 instance.",
       "Type": "String"
     },
-    "RedMineBinaryInstallerUrl": {
-      "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to RedMine installer-bin.",
+    "RedMineBinaryVersion": {
+      "Description": "RedMine version to be installed.",
       "Type": "String"
     },
     "RedMineOsPrepUrl": {
@@ -515,8 +514,8 @@
                        "RM_HELPER_FILE_ROOT_URI=",
                        { "Ref": "RedmineHelperLocation" },
                        "\n",
-                       "RM_BIN_INSTALLER=",
-                       { "Ref": "RedMineBinaryInstallerUrl" },
+                       "RM_BIN_VERS=",
+                       { "Ref": "RedMineBinaryVersion" },
                        "\n",
                        "RM_PROXY_FQDN=",
                        { "Ref": "RedMineProxyFqdn" },
