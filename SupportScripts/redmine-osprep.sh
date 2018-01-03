@@ -56,6 +56,35 @@ function NfsSetup {
    yum install -y -q "${NFSRPMS[@]}" > /dev/null 2>&1 && \
      logit "Success" || err_exit "Yum failure occurred"
 
+   # Configure autofs files
+   if [ -e /etc/auto.master ]
+   then
+      # Ensure auto.direct key present in auto.master
+      if [[ $(grep -q "^/-" /etc/auto.master)$? -eq 0 ]]
+      then
+         echo "Direct-map entry found in auto.master file"
+      else
+         printf "Adding direct-map key to auto.master file... "
+         sed -i '/^+auto.master/ s/^/\/-  \/etc\/auto.direct\n/' \
+           /etc/auto.master && echo "Success" || \
+           err_exit "Failed to add direct-map key to auto.master file"
+      fi
+
+      # Ensure auto.direct file is properly populated
+      if [[ ! -e /etc/auto.direct ]]
+      then
+         (
+           printf "/var/www/redmine/files\t${NFSOPTS}\t"
+           printf "${RM_PERSISTENT_SHARE_PATH}/files\n"
+           printf "/var/www/redmine/Repositories\t${NFSOPTS}\t"
+           printf "${RM_PERSISTENT_SHARE_PATH}/Repositories\n"
+          ) >> /etc/auto.direct
+          chcon --reference=/etc/auto.master /etc/auto.direct
+      fi
+   else
+      err_exit "Autofs's auto.master file missing"
+   fi
+
    for SVC in "${NFSSVCS[@]}"
    do
       case $(systemctl is-enabled "${SVC}") in
@@ -264,3 +293,4 @@ systemctl restart httpd && logit success || \
 
 # Try to activate epel as needed
 NeedEpel
+
