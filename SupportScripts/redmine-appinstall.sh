@@ -13,6 +13,8 @@ do
    # shellcheck disable=SC2163
    export "${RMENV}"
 done < /etc/cfn/RedMine.envs
+RMVERS="${RM_BIN_VERS}"
+RECONSURI="${RM_HELPER_ROOT_URL}"
 FWSVCS=(
       ssh
       http
@@ -98,23 +100,54 @@ sed -i '/mysqld_safe/s/^/character-set-server=utf8\n\n/' /etc/my.cnf
 systemctl enable httpd
 systemctl enable mariadb
 
-## # Configure Postfix (via add-on script)
-## echo "Fetching Postix-config tasks..."
-## curl -s -L ${RECONSURI}/main_cf.sh | /bin/bash -
-## 
-## # Grab and stage RedMine archive
-## (cd /tmp ; curl -L http://www.redmine.org/releases/${RMVERS}.tar.gz | \
-##  tar zxvf - && mv ${RMVERS} /var/www/redmine )
-## 
-## # Write standard RedMine main config (via add-on script)
-## echo "Fetching RedMine main config tasks..."
-## curl -s -L ${RECONSURI}/configuration_yml.sh | /bin/bash -
-## 
-## # Write standard (temporary) RedMine DB-config
-## # (via DL of static config-file)
-## echo "Writing RedMine's local database config info..."
-## curl -s -L ${RECONSURI}/database.yml -o /var/www/redmine/config/database.yml
-## 
+# Configure Postfix (via add-on script)
+if [[ -e "/etc/cfn/scripts/main_cf.sh" ]]
+then
+   echo "Excuting main_cf script"
+   bash -xe /etc/cfn/scripts/main_cf.sh
+else
+   echo "Fetching Postix-config tasks..."
+   curl -s -L ${RECONSURI}/main_cf.sh | /bin/bash -
+fi
+
+# Grab and stage RedMine archive
+(
+  cd /tmp && curl -L http://www.redmine.org/releases/${RMVERS}.tar.gz | \
+  tar zxvf -
+)
+
+# Use an appropriate method to move the files
+if [[ -d /var/www/redmine ]]
+then
+  (
+   cd /tmp/"${RMVERS}" && tar cf - . | ( cd /var/www/redmine && tar xf - )
+  )
+else
+   mv ${RMVERS} /var/www/redmine
+fi
+
+# Write standard RedMine main config (via add-on script)
+if [[ -e /etc/cfn/scripts/configuration_yml.sh ]]
+then
+   echo "Excuting config-YAML script"
+   bash -xe /etc/cfn/scripts/configuration_yml.sh
+else
+   echo "Fetching/running RedMine main config tasks..."
+   curl -s -L ${RECONSURI}/configuration_yml.sh | /bin/bash -
+fi
+
+# Write standard (temporary) RedMine DB-config
+# (via DL of static config-file)
+if [[ -e /etc/cfn/files/database.yml ]]
+then
+   echo "Copying RedMine's local database config info from source..."
+   install -b -m 000640 -o apache -g apache /etc/cfn/files/database.yml \
+     /var/www/redmine/config/database.yml
+else
+   echo "Writing RedMine's local database config info..."
+   curl -s -L ${RECONSURI}/database.yml -o /var/www/redmine/config/database.yml
+fi
+
 ## # Ready the ELB-tester for new read-location
 ## echo "Making sure ELB test-file is still visible"
 ## cp -al /var/www/html/ELBtest.txt /var/www/redmine/public/
