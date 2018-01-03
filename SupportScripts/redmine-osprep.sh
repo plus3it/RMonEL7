@@ -13,6 +13,7 @@ do
    # shellcheck disable=SC2163
    export "${RMENV}"
 done < /etc/cfn/RedMine.envs
+NFSOPTS="-rw,vers=4.1"
 FWSVCS=(
       ssh
       http
