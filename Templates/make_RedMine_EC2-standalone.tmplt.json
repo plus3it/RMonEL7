@@ -374,44 +374,6 @@
               }
             }
           },
-          "app-install": {
-            "commands": {
-              "10-app-install": {
-                "command": "bash -xe /etc/cfn/scripts/redmineprep.sh"
-              }
-            },
-            "files": {
-              "/etc/cfn/scripts/redmineprep.sh": {
-                "group": "root",
-                "mode": "000700",
-                "owner": "root",
-                "source": { "Ref": "RedMineAppPrepUrl" }
-              },
-              "/etc/systemd/system/redmine.service": {
-                "content": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "[Unit]\n",
-                      "Description=RedMine Service\n",
-                      "After=network.target iptables.service firewalld.service firewalld.service httpd.service\n",
-                      "\n",
-                      "[Service]\n",
-                      "Type=forking\n",
-                      "User=redmine\n",
-                      "ExecStartPre=/bin/sleep 15\n",
-                      "ExecStart=/opt/atlassian/redmine/bin/start-redmine.sh\n",
-                      "ExecStop=/opt/atlassian/redmine/bin/stop-redmine.sh\n",
-                      "ExecReload=/opt/atlassian/redmine/bin/redmine.sh | sleep 60 | /opt/atlassian/redmine/bin/redmine.sh\n",
-                      "\n",
-                      "[Install]\n",
-                      "WantedBy=multi-user.target\n"
-                    ]
-                  ]
-                }
-              }
-            }
-          },
           "configSets": {
             "launch": [
               "setup",
@@ -525,6 +487,9 @@
                        "\n",
                        "RM_PERSISTENT_SHARE_TYPE=",
                        { "Ref": "RedMineShareType" },
+                       "\n",
+                       "RM_HELPER_ROOT_URL=",
+                       { "Ref": "RedmineHelperLocation" },
                        "\n"
                     ]
                   ]
@@ -674,6 +639,83 @@
             }
           },
           "app-install": {
+            "files": {
+              "/etc/cfn/scripts/redmineprep.sh": {
+                "group": "root",
+                "mode": "000700",
+                "owner": "root",
+                "source": { "Ref": "RedMineAppPrepUrl" }
+              },
+              "/etc/cfn/scripts/main_cf.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/main_cf.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/configuration_yml.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/configuration_yml.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/files/database.yml": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "production:",
+                      "  adapter: mysql2\n",
+                      "  database: RedMine",
+                         { "Ref": "DbInstanceName" },
+                         "\n",
+                      "  host: localhost\n",
+                      "  # database user\n",
+                      "  username: ",
+                         { "Ref": "DbAdminName" },
+                         "\n",
+                      "  # password for user above\n",
+                      "  password: ",
+                         { "Ref": "DbAdminPass" } ,
+                         "\n",
+                      "  encoding: utf8\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000600",
+                "owner": "root"
+              },
+              "/etc/postfix/sasl_passwd": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/sasl_passwd"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000640",
+                "owner": "root"
+              }
+            },
             "commands": {
               "1-get-app-script": {
                 "cwd": "/etc/cfn/scripts/",
