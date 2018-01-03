@@ -82,6 +82,15 @@ systemctl restart httpd
 yum erase -y ruby
 yum install -y rh-ruby24
 
+# Enable new Ruby
+cat << EOF > /etc/profile.d/enable_rh-ruby24.sh
+#!/bin/bash
+source /opt/rh/rh-ruby24/enable
+export X_SCLS="\$(scl enable rh-ruby24 'echo \$X_SCLS')"
+EOF
+chmod 000755 /etc/profile.d/enable_rh-ruby24.sh
+
+
 # Use correct character-set with database
 sed -i '/mysqld_safe/s/^/character-set-server=utf8\n\n/' /etc/my.cnf
 
