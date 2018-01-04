@@ -21,6 +21,10 @@ FWSVCS=(
       https
    )
 
+# Need to set this lest the default umask make our lives miserable
+umask 022
+
+
 # Error logging & handling
 function err_exit {
    echo "${1}"
@@ -82,16 +86,27 @@ systemctl restart httpd
 
 # Install a more up-to-date Ruby
 yum erase -y ruby
-yum install -y rh-ruby24
+yum install -y rh-ruby24 rh-ruby24\*dev\*
 
-# Enable new Ruby
+# Enable new Ruby in current process-space
+source /opt/rh/rh-ruby24/enable
+export PATH=${PATH}:/opt/rh/rh-ruby24/root/usr/local/bin
+export X_SCLS="$(scl enable rh-ruby24 'echo $X_SCLS')"
+
+# Permanently-enable new Ruby
 cat << EOF > /etc/profile.d/enable_rh-ruby24.sh
 #!/bin/bash
 source /opt/rh/rh-ruby24/enable
+export PATH=\${PATH}:/opt/rh/rh-ruby24/root/usr/local/bin
 export X_SCLS="\$(scl enable rh-ruby24 'echo \$X_SCLS')"
 EOF
-chmod 000755 /etc/profile.d/enable_rh-ruby24.sh
 
+# Ensure that the SCL Ruby can find its runtime libs
+printf "Updating LDSO config... "
+echo /opt/rh/rh-ruby24/root/usr/lib64 > /etc/ld.so.conf.d/rh-ruby24.conf && \
+  echo "Success" || echo "Failed"
+printf "Forcing re-read of LDSO configs... "
+ldconfig && echo "Success" || echo "Failed"
 
 # Use correct character-set with database
 sed -i '/mysqld_safe/s/^/character-set-server=utf8\n\n/' /etc/my.cnf
@@ -148,19 +163,64 @@ else
    curl -s -L ${RECONSURI}/database.yml -o /var/www/redmine/config/database.yml
 fi
 
-## # Ready the ELB-tester for new read-location
-## echo "Making sure ELB test-file is still visible"
-## cp -al /var/www/html/ELBtest.txt /var/www/redmine/public/
-## systemctl restart httpd
-## 
-## # Ruby-based RedMine setup tasks here
-## echo "Fetching Ruby-gem tasks..."
-## curl -L ${RECONSURI}/GemStuff.sh | /bin/bash -
-## 
-## # Ready for Passenger setup
-## echo "Fetching Passenger httpd-config tasks..."
-## curl -s -L ${RECONSURI}/Passenger_conf.sh | /bin/bash -
-## 
+# Ready the ELB-tester for new read-location
+echo "Making sure ELB test-file is still visible"
+cp -al /var/www/html/ELBtest.txt /var/www/redmine/public/
+
+# Make sure Apache has appropriate rights to RM content
+chown -R apache:apache /var/www/redmine
+
+systemctl restart httpd
+
+# Remaining tasks don't work under FIPS mode, so...
+if [[ -e /proc/sys/crypto/fips_enabled ]] &&
+   [[ $(grep -q 1 /proc/sys/crypto/fips_enabled)$? -eq 0 ]]
+then
+   echo "FIPS mode enabled: must disable for RedMine"
+   if [[ -x $(which wam) ]]
+   then
+      echo "Found WAM: using SaltStack to disable FIPS..."
+      salt-call --local ash.fips_disable && echo "Success" || \
+        echo "Salt exited with an error"
+      printf "Verifying FIPS kernel RPM has been removed: "
+      rpm -q dracut-fips || true
+   else
+      echo "Disabling FIPS..."
+      printf "\t- Removing FIPS kernel RPMs... "
+      yum -q erase -y dracut-fips\* && echo "Success." || echo "Failed."
+      printf "\t- Backing up current boot-kernel... "
+      mv -v /boot/initramfs-$(uname -r).img{,.FIPS-bak} && \
+        echo "Success." || echo "Failed."
+      printf "\t- Creating new boot-kernel... "
+      dracut && echo "Success." || echo "Failed."
+      printf "\t- Updating boot options... "
+      grubby --update-kernel=ALL --remove-args=fips=1 && \
+        echo "Success." || echo "Failed."
+      [[ -f /etc/default/grub ]] && sed -i 's/ fips=1//' /etc/default/grub
+   fi
+   exit
+else
+   # Ruby-based RedMine setup tasks here
+   if [[ -e /etc/cfn/scripts/GemStuff.sh ]]
+   then
+      echo "Executing staged Ruby-gem tasks..."
+      bash -xe /etc/cfn/scripts/GemStuff.sh
+   else
+      echo "Fetching/executing Ruby-gem tasks..."
+      curl -L ${RECONSURI}/GemStuff.sh | /bin/bash -
+   fi
+
+   # Ready for Passenger setup
+   if [[ -e /etc/cfn/scripts/Passenger_conf.sh ]]
+   then
+      echo "Executing staged Passenger httpd-config tasks..."
+      bash -xe /etc/cfn/scripts/Passenger_conf.sh
+   else
+      echo "Fetching/executing Passenger httpd-config tasks..."
+      curl -s -L ${RECONSURI}/Passenger_conf.sh | /bin/bash -
+   fi
+fi
+
 ## # Install git-remote plugin
 ## echo "Fetching git-remote install/config tasks..."
 ## curl -s -L ${RECONSURI}/git_remote.sh | /bin/bash -
