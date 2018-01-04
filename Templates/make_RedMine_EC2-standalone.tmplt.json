@@ -674,17 +674,73 @@
                 "mode": "000700",
                 "owner": "root"
               },
+              "/etc/cfn/scripts/GemStuff.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/GemStuff.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/Passenger_conf.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/Passenger_conf.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/git_remote.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/git_remote.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/plugins.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/plugins.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
               "/etc/cfn/files/database.yml": {
                 "content": {
                   "Fn::Join": [
                     "",
                     [
-                      "production:",
+                      "production:\n",
                       "  adapter: mysql2\n",
-                      "  database: RedMine",
+                      "  database: ",
                          { "Ref": "DbInstanceName" },
                          "\n",
-                      "  host: localhost\n",
+                      "  host: localhost \n",
                       "  # database user\n",
                       "  username: ",
                          { "Ref": "DbAdminName" },
