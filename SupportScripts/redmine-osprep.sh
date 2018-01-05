@@ -24,6 +24,10 @@ PERSISTED=(
       Repositories
    )
 
+# Need to set this lest the default umask make our lives miserable
+umask 022
+
+
 # Error logging & handling
 function err_exit {
    echo "${1}"
