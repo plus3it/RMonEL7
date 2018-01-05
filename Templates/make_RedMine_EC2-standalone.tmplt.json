@@ -23,7 +23,7 @@
     },
     "UseCfnAppInstaller": {
       "Fn::Not": [
-        { "Fn::Equals": [ { "Ref": "RedMineAppPrepUrl" }, "" ] }
+        { "Fn::Equals": [ { "Ref": "RedmineAppinstallScript" }, "" ] }
       ]
     },
     "UseCfnUrl": {
@@ -133,18 +133,8 @@
       "Description": "Name of authenticated-bucket(s) hosting provisioning resource-files.",
       "Type": "String"
     },
-    "RedMineAppPrepUrl": {
-      "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to script that installs RedMine to the EC2 instance.",
-      "Type": "String"
-    },
     "RedMineBinaryVersion": {
       "Description": "RedMine version to be installed.",
-      "Type": "String"
-    },
-    "RedMineOsPrepUrl": {
-      "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
       "Type": "String"
     },
     "RedMineProxyFqdn": {
@@ -286,10 +276,10 @@
       "Type": "String",
       "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$"
     },
-    "RedminePrepScript": {
-      "Description": "URL of the script that preps the OS to host RedMine",
-      "Type": "String",
-      "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$"
+    "RedMineOsPrepUrl": {
+      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+      "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
+      "Type": "String"
     },
     "SecurityGroupIds": {
       "Description": "List of security groups to apply to the instance",
@@ -471,13 +461,10 @@
                        { "Ref": "DbFqdn" },
                        "\n",
                        "RM_OS_PREP_SCRIPT=",
-                       { "Ref": "RedminePrepScript" },
+                       { "Ref": "RedMineOsPrepUrl" },
                        "\n",
                        "RM_APP_PREP_SCRIPT=",
                        { "Ref": "RedmineAppinstallScript" },
-                       "\n",
-                       "RM_HELPER_FILE_ROOT_URI=",
-                       { "Ref": "RedmineHelperLocation" },
                        "\n",
                        "RM_BIN_VERS=",
                        { "Ref": "RedMineBinaryVersion" },
@@ -662,12 +649,6 @@
               }
             },
             "files": {
-              "/etc/cfn/scripts/redmineprep.sh": {
-                "group": "root",
-                "mode": "000700",
-                "owner": "root",
-                "source": { "Ref": "RedMineAppPrepUrl" }
-              },
               "/etc/cfn/scripts/main_cf.sh": {
                 "source": {
                   "Fn::Join": [
@@ -748,7 +729,7 @@
                     "",
                     [
                       "curl -skL ",
-                      { "Ref": "RedminePrepScript" },
+                      { "Ref": "RedMineOsPrepUrl" },
                       " -o redmine-osprep.sh"
                     ]
                   ]

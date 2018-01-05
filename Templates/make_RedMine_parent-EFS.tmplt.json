@@ -62,10 +62,9 @@
           },
           "Parameters": [
 	    "RedMineOsPrepUrl",
-	    "RedminePrepScript",
             "RedmineAppinstallScript",
-	    "RedMineAppPrepUrl",
-	    "RedMineBinaryInstallerUrl",
+	    "RedmineAppinstallScript",
+	    "RedMineBinaryVersion",
 	    "RedmineHelperLocation",
 	    "RedMineProxyFqdn",
 	    "RedMineSharePath"
@@ -294,15 +293,19 @@
       "Description": "URL to the child-template for creating the GitLab RDS database.",
       "Type": "String"
     },
-    "RedMineAppPrepUrl": {
+    "RedmineAppinstallScript": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
       "Description": "URL to script that installs RedMine to the EC2 instance.",
       "Type": "String"
     },
-    "RedMineBinaryInstallerUrl": {
-      "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to RedMine installer-bin.",
+    "RedMineBinaryVersion": {
+      "Description": "RedMine version to be installed (e.g., \"redmine-3.4.3\").",
       "Type": "String"
+    },
+    "RedmineHelperLocation": {
+      "Description": "URL-root of location hosting ancilllary install files.",
+      "Type": "String",
+      "AllowedPattern": "^http://.*$|^https://.*$|^s3://.*$"
     },
     "RedMineOsPrepUrl": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
@@ -321,16 +324,6 @@
     "RedmineAppinstallScript": {
       "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$",
       "Description": "URL of the script that installs/configures RedMine",
-      "Type": "String"
-    },
-    "RedmineHelperLocation": {
-      "AllowedPattern": "^http://.*$|^https://.*$|^s3://.*$",
-      "Description": "URL-root of location hosting ancilllary install files.",
-      "Type": "String"
-    },
-    "RedminePrepScript": {
-      "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$",
-      "Description": "URL of the script that preps the OS to host RedMine",
       "Type": "String"
     },
     "RolePrefix": {
@@ -404,14 +397,22 @@
           "PrivateIp": { "Ref": "PrivateIp" },
           "ProvisionUser": { "Ref": "ProvisionUser" },
           "PyStache": { "Ref": "PyStache" },
-          "RedMineAppPrepUrl": { "Ref": "RedMineAppPrepUrl" },
-          "RedMineBinaryInstallerUrl": { "Ref": "RedMineBinaryInstallerUrl" },
+          "RedmineAppinstallScript": { "Ref": "RedmineAppinstallScript" },
+          "RedMineBinaryVersion": { "Ref": "RedMineBinaryVersion" },
+          "RedmineHelperLocation": { "Ref": "RedmineHelperLocation" },
           "RedMineOsPrepUrl": { "Ref": "RedMineOsPrepUrl" },
           "RedMineProxyFqdn": { "Ref": "RedMineProxyFqdn" },
-          "RedMineSharePath": { "Ref": "RedMineSharePath" },
+          "RedMineSharePath": {
+            "Fn::Join": [
+              ":",
+              [
+                { "Fn::GetAtt": [ "EfsRes", "Outputs.EfsEndpoint" ] },
+                { "Ref": "RedMineSharePath" }
+              ]
+            ]
+          },
           "RedMineShareType": "nfs",
 	  "RedmineAppinstallScript": { "Ref": "RedmineAppinstallScript" },
-	  "RedminePrepScript": { "Ref": "RedminePrepScript" },
 	  "RedmineHelperLocation": { "Ref": "RedmineHelperLocation" },
           "SecurityGroupIds": {
             "Fn::Join": [
