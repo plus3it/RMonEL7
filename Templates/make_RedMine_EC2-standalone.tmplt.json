@@ -384,7 +384,10 @@
               {
                 "Fn::If": [
                   "UseCfnAppInstaller",
-                  "app-install",
+                  [
+                    "app-install",
+                    "ready-rc_local"
+                  ],
                   { "Ref": "AWS::NoValue" }
                 ]
               },
@@ -639,6 +642,25 @@
             }
           },
           "app-install": {
+            "commands": {
+              "1-get-app-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedmineAppinstallScript" },
+                      " -o redmine-appinstall.sh"
+                    ]
+                  ]
+                }
+              },
+              "2-run-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": "bash -xe redmine-appinstall.sh"
+              }
+            },
             "files": {
               "/etc/cfn/scripts/redmineprep.sh": {
                 "group": "root",
@@ -674,6 +696,151 @@
                 "mode": "000700",
                 "owner": "root"
               },
+              "/etc/cfn/files/database.yml": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "production:\n",
+                      "  adapter: mysql2\n",
+                      "  database: ",
+                         { "Ref": "DbInstanceName" },
+                         "\n",
+                      "  host: localhost \n",
+                      "  # database user\n",
+                      "  username: ",
+                         { "Ref": "DbAdminName" },
+                         "\n",
+                      "  # password for user above\n",
+                      "  password: ",
+                         { "Ref": "DbAdminPass" } ,
+                         "\n",
+                      "  encoding: utf8\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000600",
+                "owner": "root"
+              },
+              "/etc/postfix/sasl_passwd": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/sasl_passwd"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000640",
+                "owner": "root"
+              }
+            }
+          },
+          "os-prep": {
+            "commands": {
+              "1-get-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedminePrepScript" },
+                      " -o redmine-osprep.sh"
+                    ]
+                  ]
+                }
+              },
+              "2-run-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": "bash -xe redmine-osprep.sh"
+              }
+            }
+          },
+          "ready-rc_local": {
+            "commands": {
+              "1-enable-ruby": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'source /etc/profile.d/enable_rh-ruby24.sh' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "2-add-gem-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/GemStuff.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "3-add-passenger-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/Passenger_conf.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "4-git-remote-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/git_remote.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "5-rm-plugins-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/plugins.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "7-add-perm-change": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'chmod a-x /etc/rc.d/rc.local' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "10-set_perm": {
+                "command": "chmod a+x /etc/rc.d/rc.local"
+              }
+            },
+            "files": {
               "/etc/cfn/scripts/GemStuff.sh": {
                 "source": {
                   "Fn::Join": [
@@ -729,87 +896,6 @@
                 "group": "root",
                 "mode": "000700",
                 "owner": "root"
-              },
-              "/etc/cfn/files/database.yml": {
-                "content": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "production:\n",
-                      "  adapter: mysql2\n",
-                      "  database: ",
-                         { "Ref": "DbInstanceName" },
-                         "\n",
-                      "  host: localhost \n",
-                      "  # database user\n",
-                      "  username: ",
-                         { "Ref": "DbAdminName" },
-                         "\n",
-                      "  # password for user above\n",
-                      "  password: ",
-                         { "Ref": "DbAdminPass" } ,
-                         "\n",
-                      "  encoding: utf8\n"
-                    ]
-                  ]
-                },
-                "group": "root",
-                "mode": "000600",
-                "owner": "root"
-              },
-              "/etc/postfix/sasl_passwd": {
-                "source": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      { "Ref": "RedmineHelperLocation" },
-                      "/sasl_passwd"
-                    ]
-                  ]
-                },
-                "group": "root",
-                "mode": "000640",
-                "owner": "root"
-              }
-            },
-            "commands": {
-              "1-get-app-script": {
-                "cwd": "/etc/cfn/scripts/",
-                "command": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "curl -skL ",
-                      { "Ref": "RedmineAppinstallScript" },
-                      " -o redmine-appinstall.sh"
-                    ]
-                  ]
-                }
-              },
-              "2-run-prep-script": {
-                "cwd": "/etc/cfn/scripts/",
-                "command": "bash -xe redmine-appinstall.sh"
-              }
-            }
-          },
-          "os-prep": {
-            "commands": {
-              "1-get-prep-script": {
-                "cwd": "/etc/cfn/scripts/",
-                "command": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "curl -skL ",
-                      { "Ref": "RedminePrepScript" },
-                      " -o redmine-osprep.sh"
-                    ]
-                  ]
-                }
-              },
-              "2-run-prep-script": {
-                "cwd": "/etc/cfn/scripts/",
-                "command": "bash -xe redmine-osprep.sh"
               }
             }
           },
