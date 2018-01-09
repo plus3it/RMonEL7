@@ -845,6 +845,11 @@
                 "\n",
                 "runcmd:\n",
                 "  - |\n",
+                "    # CFN LaunchConfig Update Toggle: ",
+                "    export STACK_TOGGLE_VAL=\"",
+                        { "Ref" : "ToggleNewInstances" },
+                     "\"\n",
+                "    \n",
                 "    # Export cert bundle ENVs\n",
                 "    export AWS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n",
                 "    export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n\n",
@@ -860,70 +865,106 @@
                 "    }\n",
                 "    # Install RPMs needed by the cfn-tools.\n",
                 "    yum --enablerepo=",
-                { "Ref": "EpelRepo" },
-                " install -y ",
-                { "Ref": "PyStache" },
-                " ",
-                { "Ref": "PipRpm" },
-                " || err_exit 'Could not install Cfn dependencies.'\n",
+                     { "Ref": "EpelRepo" },
+                     " install -y ",
+                     { "Ref": "PyStache" },
+                     " ",
+                     { "Ref": "PipRpm" },
+                     " || err_exit 'Could not install Cfn dependencies.'\n",
                 "    \n",
                 "    # Upgrade pip and setuptools\n",
                 "    PYPI_URL=",
-                { "Ref": "PipIndexFips" },
-                "\n",
+                     { "Ref": "PipIndexFips" },
+                     "\n",
                 "    pip install --index-url=\"$PYPI_URL\"",
-                " --upgrade pip setuptools\n\n",
+                     " --upgrade pip setuptools\n\n",
                 "    # Update cfn-bootstrapper hash method\n",
                 "    printf 'Updating CFn hash-check method... '\n",
                 "    PYVERS=$(python -c 'import sys;",
-                " version=sys.version_info[:2];",
-                " print(\"{0}.{1}\".format(*version))')\n",
+                     " version=sys.version_info[:2];",
+                     " print(\"{0}.{1}\".format(*version))')\n",
                 "    sed -i '/^[ \\t][ \\t]*self._etag/s/etag$/None/'",
-                " /usr/lib/python${PYVERS}/site-packages/cfnbootstrap",
-                "/util.py && echo 'Success' || ",
-                "err_exit 'Failed updating CFn hash-method'\n",
+                     " /usr/lib/python${PYVERS}/site-packages/cfnbootstrap",
+                     "/util.py && echo 'Success' || ",
+                     "err_exit 'Failed updating CFn hash-method'\n",
+                "    \n",
+                "    # Fixup cfn utils\n",
+                "    INITDIR=$(find -L /opt/aws/apitools/cfn-init/init -name ",
+                     "redhat 2> /dev/null || echo /usr/init/redhat)\n",
+                "    chmod 775 ${INITDIR}/cfn-hup\n",
+                "    ln -f -s ${INITDIR}/cfn-hup /etc/rc.d/init.d/cfn-hup\n",
+                "    chkconfig --add cfn-hup\n",
+                "    chkconfig cfn-hup on\n",
+                "    BINDIR=$(find -L /opt/aws/apitools/cfn-init -name bin ",
+                     "2> /dev/null || echo /usr/bin)\n",
+                "    for SCRIPT in cfn-elect-cmd-leader cfn-get-metadata ",
+                     "cfn-hup cfn-init cfn-send-cmd-event ",
+                     "cfn-send-cmd-result cfn-signal\n",
+                "    do\n",
+                "       ln -s ${BINDIR}/${SCRIPT} /opt/aws/bin/${SCRIPT} 2> ",
+                        "/dev/null || echo \"Skipped symbolic link, ",
+                        "/opt/aws/bin/${SCRIPT} already exists\"\n",
+                "    done\n",
+                "    \n",
+                "    # Add cfn-signal to path\n",
+                "    hash cfn-signal 2> /dev/null || ",
+                "    PATH=\"${PATH}:/usr/local/bin:/opt/aws/bin\"\n",
                 "    \n",
                 "    # Initialize the CFn subsystems\n",
                 "    /opt/aws/bin/cfn-init -v -c launch",
-                " --stack ",
-                { "Ref": "AWS::StackName" },
-                " --resource RedMineHost",
-                {
-                  "Fn::If": [
-                    "UseCfnUrl",
-                    {
-                      "Fn::Join": [
-                        "",
-                        [
-                          " --url ",
-                          { "Ref": "CfnEndpointUrl" }
-                        ]
-                      ]
-                    },
-                    ""
-                  ]
-                },
-                " --region ",
-                { "Ref": "AWS::Region" },
-                " ||",
-                " ( echo 'ERROR: cfn-init failed! Aborting!';",
-                " /opt/aws/bin/cfn-signal -e 1",
-                "  --stack ",
-                { "Ref": "AWS::StackName" },
-                "  --resource RedMineHost",
-                {
-                  "Fn::If": [
-                    "UseCfnUrl",
-                    {
-                      "Fn::Join": [
-                        "",
-                        [
-                          " --url ",
-                          { "Ref": "CfnEndpointUrl" }
-                        ]
-                      ]
-                    },
-                    ""
+                     " --stack ",
+                     { "Ref": "AWS::StackName" },
+                     " --resource RedMineHost",
+                     {
+                       "Fn::If": [
+                         "UseCfnUrl",
+                         {
+                           "Fn::Join": [
+                             "",
+                             [
+                               " --url ",
+                               { "Ref": "CfnEndpointUrl" }
+                             ]
+                           ]
+                         },
+                         ""
+                       ]
+                     },
+                     " --region ",
+                     { "Ref": "AWS::Region" },
+                     " ||",
+                     " ( echo 'ERROR: cfn-init failed! Aborting!' ;",
+                     " /opt/aws/bin/cfn-signal -e 1",
+                     "  --stack ",
+                     { "Ref": "AWS::StackName" },
+                     "  --resource RedMineHost",
+                     {
+                       "Fn::If": [
+                         "AssignInstanceRole",
+                         {
+                           "Fn::Join": [
+                             "",
+                             [
+                               " --role ", { "Ref" : "InstanceRole" }
+                             ]
+                           ]
+                         },
+                         ""
+                       ]
+                     },
+                     {
+                       "Fn::If": [
+                         "UseCfnUrl",
+                         {
+                           "Fn::Join": [
+                             "",
+                             [
+                               " --url ",
+                               { "Ref": "CfnEndpointUrl" }
+                             ]
+                           ]
+                         },
+                         ""
                   ]
                 },
                 "  --region ",
