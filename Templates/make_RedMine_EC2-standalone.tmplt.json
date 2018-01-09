@@ -133,27 +133,6 @@
       "Description": "Name of authenticated-bucket(s) hosting provisioning resource-files.",
       "Type": "String"
     },
-    "RedMineBinaryVersion": {
-      "Description": "RedMine version to be installed.",
-      "Type": "String"
-    },
-    "RedMineProxyFqdn": {
-      "Description": "Fully-qualified domainname of the RedMine reverse-proxy host.",
-      "Type": "String"
-    },
-    "RedMineSharePath": {
-      "Default": "",
-      "Description": "Share-path of shared RedMine content.",
-      "Type": "String"
-    },
-    "RedMineShareType": {
-      "AllowedValues": [
-        "glusterfs",
-        "nfs"
-      ],
-      "Description": "Type of network share hosting shared RedMine content.",
-      "Type": "String"
-    },
     "DbAdminName": {
       "Description": "Name of the RedMine master database-user.",
       "Type": "String"
@@ -198,12 +177,36 @@
         "t2.small",
         "t2.medium",
         "t2.large",
+        "t2.xlarge",
+        "t2.2xlarge",
+        "m5.large",
+        "m5.xlarge",
+        "m5.2xlarge",
+        "m5.4xlarge",
+        "m4.large",
+        "m4.xlarge",
+        "m4.2xlarge",
+        "m4.4xlarge",
+        "m3.large",
+        "m3.xlarge",
+        "m3.2xlarge",
+        "c5.large",
+        "c5.xlarge",
+        "c5.2xlarge",
+        "c5.4xlarge",
+        "c5.9xlarge",
         "c4.large",
         "c4.xlarge",
-        "m4.large",
-        "m4.xlarge"
+        "c4.2xlarge",
+        "c4.4xlarge",
+        "c4.8xlarge",
+        "c3.large",
+        "c3.xlarge",
+        "c3.2xlarge",
+        "c3.4xlarge",
+        "c3.8xlarge"
       ],
-      "Default": "t2.micro",
+      "Default": "t2.large",
       "Description": "Amazon EC2 instance type",
       "Type": "String"
     },
@@ -238,6 +241,12 @@
       "Description": "Controls whether to run yum update during a stack update (on the initial instance launch, Watchmaker _always_ installs updates)",
       "Type": "String"
     },
+    "PipIndexFips": {
+      "AllowedPattern": "^http[s]?://.*$",
+      "Default": "https://pypi.org/simple",
+      "Description": "URL to the PyPi Index",
+      "Type": "String"
+    },
     "PipRpm": {
       "Default": "python2-pip",
       "Description": "Name of preferred pip RPM.",
@@ -260,26 +269,36 @@
       "Description": "Name of preferred pystache RPM.",
       "Type": "String"
     },
-    "PipIndexFips": {
-      "AllowedPattern": "^http[s]?://.*$",
-      "Default": "https://pypi.org/simple",
-      "Description": "URL to the PyPi Index",
+    "RedMineBinaryVersion": {
+      "Description": "RedMine version to be installed.",
+      "Type": "String"
+    },
+    "RedMineOsPrepUrl": {
+      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+      "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
+      "Type": "String"
+    },
+    "RedMineProxyFqdn": {
+      "Description": "Fully-qualified domainname of the RedMine reverse-proxy host.",
+      "Type": "String"
+    },
+    "RedMineSharePath": {
+      "Default": "",
+      "Description": "Share-path of shared RedMine content.",
+      "Type": "String"
+    },
+    "RedMineShareType": {
+      "AllowedValues": [
+        "glusterfs",
+        "nfs"
+      ],
+      "Description": "Type of network share hosting shared RedMine content.",
       "Type": "String"
     },
     "RedmineHelperLocation": {
       "Description": "URL-root of location hosting ancilllary install files.",
       "Type": "String",
       "AllowedPattern": "^http://.*$|^https://.*$|^s3://.*$"
-    },
-    "RedmineAppinstallScript": {
-      "Description": "URL of the script that installs/configures RedMine",
-      "Type": "String",
-      "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$"
-    },
-    "RedMineOsPrepUrl": {
-      "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
-      "Type": "String"
     },
     "SecurityGroupIds": {
       "Description": "List of security groups to apply to the instance",
