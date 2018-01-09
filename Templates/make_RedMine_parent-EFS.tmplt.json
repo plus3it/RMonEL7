@@ -77,7 +77,7 @@
           "Parameters": [
             "ServiceTld",
             "TargetVPC",
-            "HaSubnets",
+            "ProtectedSubnets",
             "RolePrefix"
           ]
         }
@@ -116,9 +116,16 @@
       "Description": "ID of the AMI to launch",
       "Type": "String"
     },
+    "BackendTimeout": {
+      "Default": "600",
+      "Description": "How long - in seconds - back-end connection may be idle before attempting session-cleanup",
+      "MinValue": "60",
+      "MaxValue": "3600",
+      "Type": "Number"
+    },
     "BucketTemplateUri": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to the child-template for creating the GitLab S3 bucket(s) IAM roles.",
+      "Description": "URL to the child-template for creating the RedMine S3 bucket(s) IAM roles.",
       "Type": "String"
     },
     "CfnResourceBucket": {
@@ -183,7 +190,12 @@
     },
     "EfsTemplateUri": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to the child-template for creating the GitLab EFS shares.",
+      "Description": "URL to the child-template for creating the RedMine EFS shares.",
+      "Type": "String"
+    },
+    "ElbTemplate": {
+      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+      "Description": "URL to the child-template for creating the public-facing RedMine ELB.",
       "Type": "String"
     },
     "EpelRepo": {
@@ -193,10 +205,6 @@
       "Description": "Name of network's EPEL repo.",
       "Type": "String"
     },
-    "HaSubnets": {
-      "Description": "Select three subnets - each from different Availability Zones.",
-      "Type": "List<AWS::EC2::Subnet::Id>"
-    },
     "Hostname": {
       "ConstraintDescription": "An alphanumeric string to complete the hostname portion of the instance's FQDN.",
       "Description": "Node-name for RedMine's hostname and DNS record",
@@ -204,7 +212,7 @@
     },
     "IamTemplateUri": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to the child-template for creating the GitLab S3 bucket(s) IAM roles.",
+      "Description": "URL to the child-template for creating the RedMine S3 bucket(s) IAM roles.",
       "Type": "String"
     },
     "InstanceCount": {
@@ -276,12 +284,24 @@
       "Description": "(Optional) Set a static, primary private IP. Leave blank to auto-select a free IP",
       "Type": "String"
     },
+    "ProtectedSubnets": {
+      "Description": "Select three subnets - each from different Availability Zones.",
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
     "ProvisionUser": {
       "AllowedPattern": "[a-z0-9]{6,12}+",
       "ConstraintDescription": "Alphanumeric string between 6 and 12 characters.",
       "Default": "confbuilder",
       "Description": "Default login user account name.",
       "Type": "String"
+    },
+    "ProxyPrettyName": {
+      "Description": "A short, human-friendly label to assign to the ELB (no capital letters).",
+      "Type": "String"
+    },
+    "PublicSubnets": {
+      "Description": "Select three subnets - each from different Availability Zones.",
+      "Type": "List<AWS::EC2::Subnet::Id>"
     },
     "PyStache": {
       "Default": "pystache",
@@ -290,7 +310,7 @@
     },
     "RdsTemplateUri": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to the child-template for creating the GitLab RDS database.",
+      "Description": "URL to the child-template for creating the RedMine RDS database.",
       "Type": "String"
     },
     "RedmineAppinstallScript": {
@@ -306,6 +326,11 @@
       "Description": "URL-root of location hosting ancilllary install files.",
       "Type": "String",
       "AllowedPattern": "^http://.*$|^https://.*$|^s3://.*$"
+    },
+    "RedmineListenerCert": {
+      "Default": "",
+      "Description": "Name/ID of the ACM-managed SSL Certificate to protect public listener.",
+      "Type": "String"
     },
     "RedMineOsPrepUrl": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
@@ -337,7 +362,7 @@
     },
     "SgTemplateUri": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to the child-template for creating the GitLab security-groups.",
+      "Description": "URL to the child-template for creating the RedMine security-groups.",
       "Type": "String"
     },
     "SubnetId": {
@@ -428,9 +453,7 @@
           "WatchmakerConfig": { "Ref": "WatchmakerConfig" },
           "WatchmakerEnvironment": "dev"
         },
-        "TemplateURL": {
-          "Ref": "Ec2TemplateUri"
-        }
+        "TemplateURL": { "Ref": "Ec2TemplateUri" }
       },
       "Type": "AWS::CloudFormation::Stack"
     },
@@ -438,26 +461,43 @@
       "Properties": {
         "Parameters": {
           "EfsSg": {
-            "Fn::GetAtt": [
-              "SgRes",
-              "Outputs.NasSg"
-            ]
+            "Fn::GetAtt": [ "SgRes", "Outputs.NasSg" ]
           },
           "EfsSubnet": {
             "Fn::Join": [
               ",",
-              {
-                "Ref": "HaSubnets"
-              }
+              { "Ref": "ProtectedSubnets" }
             ]
           },
-          "ServiceTld": {
-            "Ref": "ServiceTld"
-          }
+          "ServiceTld": { "Ref": "ServiceTld" }
         },
-        "TemplateURL": {
-          "Ref": "EfsTemplateUri"
-        }
+        "TemplateURL": { "Ref": "EfsTemplateUri" }
+      },
+      "Type": "AWS::CloudFormation::Stack"
+    },
+    "ElbRes": {
+      "Properties": {
+        "Parameters": {
+          "BackendTimeout": { "Ref": "BackendTimeout" },
+          "HaSubnets": {
+            "Fn::Join": [
+              ",",
+              { "Ref": "PublicSubnets" }
+            ]
+          },
+          "ProxyPrettyName": { "Ref": "ProxyPrettyName" },
+          "SecurityGroupIds": {
+            "Fn::GetAtt": [ "SgRes", "Outputs.AppSg" ]
+          },
+          "RedmineInstanceId": {
+            "Fn::GetAtt": [ "Ec2Res", "Outputs.RedMineInstanceId" ]
+          },
+          "RedmineListenerCert": { "Ref": "RedmineListenerCert" },
+          "RedmineListenPort": "443",
+          "RedmineServicePort": "80",
+          "TargetVPC": { "Ref": "TargetVPC" }
+        },
+        "TemplateURL": { "Ref": "ElbTemplate" }
       },
       "Type": "AWS::CloudFormation::Stack"
     },
@@ -465,21 +505,12 @@
       "Properties": {
         "Parameters": {
           "BackupBucketArn": {
-            "Fn::GetAtt": [
-              "S3Res",
-              "Outputs.BucketArn"
-            ]
+            "Fn::GetAtt": [ "S3Res", "Outputs.BucketArn" ]
           },
-          "RolePrefix": {
-            "Ref": "RolePrefix"
-          },
-          "ServiceTld": {
-            "Ref": "ServiceTld"
-          }
+          "RolePrefix": { "Ref": "RolePrefix" },
+          "ServiceTld": { "Ref": "ServiceTld" }
         },
-        "TemplateURL": {
-          "Ref": "IamTemplateUri"
-        },
+        "TemplateURL": { "Ref": "IamTemplateUri" },
         "TimeoutInMinutes": "10"
       },
       "Type": "AWS::CloudFormation::Stack"
@@ -487,57 +518,32 @@
     "RdsRes": {
       "Properties": {
         "Parameters": {
-          "DbAdminName": {
-            "Ref": "DbAdminName"
-          },
-          "DbAdminPass": {
-            "Ref": "DbAdminPass"
-          },
-          "DbDataSize": {
-            "Ref": "DbDataSize"
-          },
-          "DbInstanceName": {
-            "Ref": "DbInstanceName"
-          },
-          "DbInstanceType": {
-            "Ref": "DbInstanceType"
-          },
+          "DbAdminName": { "Ref": "DbAdminName" },
+          "DbAdminPass": { "Ref": "DbAdminPass" },
+          "DbDataSize": { "Ref": "DbDataSize" },
+          "DbInstanceName": { "Ref": "DbInstanceName" },
+          "DbInstanceType": { "Ref": "DbInstanceType" },
           "DbIsMultiAz": "true",
-          "DbNodeName": {
-            "Ref": "DbNodeName"
-          },
+          "DbNodeName": { "Ref": "DbNodeName" },
           "DbSecurityGroup": {
-            "Fn::GetAtt": [
-              "SgRes",
-              "Outputs.RdsSg"
-            ]
+            "Fn::GetAtt": [ "SgRes", "Outputs.RdsSg" ]
           },
           "DbSubnets": {
             "Fn::Join": [
               ",",
-              {
-                "Ref": "HaSubnets"
-              }
+              { "Ref": "ProtectedSubnets" }
             ]
           },
-          "InstanceCount": {
-            "Ref": "InstanceCount"
-          },
-          "TargetVPC": {
-            "Ref": "TargetVPC"
-          }
+          "InstanceCount": { "Ref": "InstanceCount" },
+          "TargetVPC": { "Ref": "TargetVPC" }
         },
-        "TemplateURL": {
-          "Ref": "RdsTemplateUri"
-        }
+        "TemplateURL": { "Ref": "RdsTemplateUri" }
       },
       "Type": "AWS::CloudFormation::Stack"
     },
     "S3Res": {
       "Properties": {
-        "TemplateURL": {
-          "Ref": "BucketTemplateUri"
-        },
+        "TemplateURL": { "Ref": "BucketTemplateUri" },
         "TimeoutInMinutes": "10"
       },
       "Type": "AWS::CloudFormation::Stack"
@@ -545,13 +551,9 @@
     "SgRes": {
       "Properties": {
         "Parameters": {
-          "TargetVPC": {
-            "Ref": "TargetVPC"
-          }
+          "TargetVPC": { "Ref": "TargetVPC" }
         },
-        "TemplateURL": {
-          "Ref": "SgTemplateUri"
-        },
+        "TemplateURL": { "Ref": "SgTemplateUri" },
         "TimeoutInMinutes": "10"
       },
       "Type": "AWS::CloudFormation::Stack"
