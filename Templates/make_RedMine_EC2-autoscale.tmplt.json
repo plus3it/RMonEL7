@@ -425,7 +425,7 @@
                       "/opt/aws/bin/cfn-signal -e 0",
                       " --stack ",
                       { "Ref": "AWS::StackName" },
-                      " --resource WatchmakerAutoScalingGroup",
+                      " --resource RedMineASG",
                       {
                         "Fn::If": [
                           "AssignInstanceRole",
@@ -847,7 +847,7 @@
                 "  - |\n",
                 "    # CFN LaunchConfig Update Toggle: ",
                 "    export STACK_TOGGLE_VAL=\"",
-                        { "Ref" : "ToggleNewInstances" },
+                        { "Ref": "ToggleNewInstances" },
                      "\"\n",
                 "    \n",
                 "    # Export cert bundle ENVs\n",
@@ -859,8 +859,8 @@
                 "     echo \"${1}\"\n",
                 "     logger -p kern.crit -t UserData \"${1}\"\n",
                 "     /opt/aws/bin/cfn-signal -e 1 --stack ",
-                { "Ref": "AWS::StackName" },
-                " --resource RedMineHost\n",
+                      { "Ref": "AWS::StackName" },
+                      " --resource RedMineHost\n",
                 "     exit 1\n",
                 "    }\n",
                 "    # Install RPMs needed by the cfn-tools.\n",
@@ -945,7 +945,7 @@
                            "Fn::Join": [
                              "",
                              [
-                               " --role ", { "Ref" : "InstanceRole" }
+                               " --role ", { "Ref": "InstanceRole" }
                              ]
                            ]
                          },
