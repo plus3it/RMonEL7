@@ -295,6 +295,11 @@
       "Description": "Type of network share hosting shared RedMine content.",
       "Type": "String"
     },
+    "RedmineAppinstallScript": {
+      "Description": "URL of the script that installs/configures RedMine",
+      "Type": "String",
+      "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$"
+    },
     "RedmineHelperLocation": {
       "Description": "URL-root of location hosting ancilllary install files.",
       "Type": "String",
