@@ -26,6 +26,11 @@
         { "Fn::Equals": [ { "Ref": "NoReboot" }, "true" ] }
       ]
     },
+    "UseCfnAppInstaller": {
+      "Fn::Not": [
+        { "Fn::Equals": [ { "Ref": "RedmineAppinstallScript" }, "" ] }
+      ]
+    },
     "UseCfnUrl": {
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "CfnEndpointUrl" }, "" ] }
@@ -50,8 +55,76 @@
   "Description": "This template creates an Autoscaling Group and Launch Configuration to deploy STIG-hardened Enterprise Linux 7 instances to host the RedMine service's web-tier.",
   "Mappings": {},
   "Metadata": {
-    "AWS::CloudFormation::Interface": {}
+    "AWS::CloudFormation::Interface": {
+      "ParameterGroups": [
+        {
+          "Label": {
+            "default": "Generic EC2 Parms"
+          },
+          "Parameters": [
+            "InstanceType",
+            "DesiredCapacity",
+            "MaxCapacity",
+            "MinCapacity",
+            "AmiId",
+            "Hostname",
+            "Domainname",
+            "ProvisionUser",
+            "KeyPairName",
+            "AdminPubkeyURL",
+            "InstanceRole",
+            "SecurityGroupIds",
+            "SubnetIds",
+            "AppVolumeDevice",
+            "AppVolumeMountPath",
+            "AppVolumeSize",
+            "AppVolumeType",
+            "NoPublicIp",
+            "ToggleNewInstances",
+            "CfnEndpointUrl"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Hardening Tools"
+          },
+          "Parameters": [
+            "WatchmakerConfig",
+            "WatchmakerEnvironment",
+            "WatchmakerS3Source",
+            "NoReboot",
+            "NoUpdates",
+            "ToggleCfnInitUpdate",
+            "EpelRepo",
+            "PipRpm",
+            "PyStache",
+            "PypiIndexUrl",
+            "CfnGetPipUrl",
+            "CfnBootstrapUtilsUrl"
+          ]
+        },
+        {
+          "Label": {
+            "default": "RedMine Configuration"
+          },
+          "Parameters": [
+            "RedmineBinaryVersion",
+            "RedmineOsPrepUrl",
+            "RedmineAppinstallScript",
+            "RedmineHelperLocation",
+            "RedmineSharePath",
+            "RedmineShareType",
+            "RedmineProxyFqdn",
+            "DbFqdn",
+            "DbInstanceName",
+            "DbAdminName",
+            "DbAdminPass"
+          ]
+        }
+      ]
+    }
   },
+  "Outputs": {},
   "Parameters": {
     "AdminPubkeyURL": {
       "AllowedPattern": "^$|^http://.*$|^https://.*$|^s3://.*$",
@@ -102,10 +175,22 @@
       "Description": "Type of EBS volume to create. Ignored if \"AppVolumeDevice\" is blank",
       "Type": "String"
     },
+    "CfnBootstrapUtilsUrl": {
+      "AllowedPattern": "^http[s]?://.*\\.tar\\.gz$",
+      "Default": "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
+      "Description": "(Optional - if AMI contains cfn-bootstrap) URL to aws-cfn-bootstrap-latest.tar.gz",
+      "Type": "String"
+    },
     "CfnEndpointUrl": {
       "AllowedPattern": "^$|^http[s]?://.*$",
-      "Default": "https://cloudformation.us-east-1.amazonaws.com",
+      "Default": "https://cloudformation.us-east-1.amazonaws.com", 
       "Description": "(Optional) URL to the CloudFormation Endpoint. e.g. https://cloudformation.us-east-1.amazonaws.com",
+      "Type": "String"
+    },
+    "CfnGetPipUrl": {
+      "AllowedPattern": "^http[s]?://.*\\.py$",
+      "Default": "https://bootstrap.pypa.io/get-pip.py",
+      "Description": "(Optional - if AMI contains cfn-bootstrap) URL to get-pip.py",
       "Type": "String"
     },
     "DbAdminName": {
@@ -114,6 +199,7 @@
     },
     "DbAdminPass": {
       "Description": "Password of the RedMine master database-user.",
+      "NoEcho": "True",
       "Type": "String"
     },
     "DbFqdn": {
@@ -134,11 +220,8 @@
       "Description": "Suffix for RedMine's hostname and DNS record",
       "Type": "String"
     },
-    "EpelRepo": {
-      "AllowedPattern": "^[a-z][a-z0-9-]*$",
-      "ConstraintDescription": "An alphanumeric string that represents the EPEL yum repo's label.",
-      "Default": "epel",
-      "Description": "Name of network's EPEL repo.",
+    "ElbArn": {
+      "Description": "Elastic Load-Balancer to associate EC2 resources to.",
       "Type": "String"
     },
     "Hostname": {
@@ -186,7 +269,7 @@
         "c3.4xlarge",
         "c3.8xlarge"
       ],
-      "Default": "t2.large",
+      "Default": "t2.micro",
       "Description": "Amazon EC2 instance type",
       "Type": "String"
     },
@@ -231,17 +314,6 @@
       "Description": "Controls whether to run yum update during a stack update (on the initial instance launch, Watchmaker _always_ installs updates)",
       "Type": "String"
     },
-    "PipIndexFips": {
-      "AllowedPattern": "^http[s]?://.*$",
-      "Default": "https://pypi.org/simple",
-      "Description": "URL to the PyPi Index",
-      "Type": "String"
-    },
-    "PipRpm": {
-      "Default": "python2-pip",
-      "Description": "Name of preferred pip RPM.",
-      "Type": "String"
-    },
     "ProvisionUser": {
       "AllowedPattern": "[a-z0-9]{6,12}+",
       "ConstraintDescription": "Alphanumeric string between 6 and 12 characters.",
@@ -249,41 +321,47 @@
       "Description": "Default login user account name.",
       "Type": "String"
     },
-    "PyStache": {
-      "Default": "pystache",
-      "Description": "Name of preferred pystache RPM.",
+    "PypiIndexUrl": {
+      "AllowedPattern": "^http[s]?://.*$",
+      "Default": "https://pypi.org/simple",
+      "Description": "URL to the PyPi Index",
       "Type": "String"
     },
-    "RedMineBinaryVersion": {
+    "RedmineAppinstallScript": {
+      "Description": "URL of the script that installs/configures RedMine",
+      "Type": "String",
+      "AllowedPattern": "^http://.*\\.sh$|^https://.*\\.sh$|^s3://.*\\.sh$"
+    },
+    "RedmineBinaryVersion": {
       "Description": "RedMine version to be installed.",
-      "Type": "String"
-    },
-    "RedMineOsPrepUrl": {
-      "AllowedPattern": "^$|^http://.*$|^https://.*$",
-      "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
-      "Type": "String"
-    },
-    "RedMineProxyFqdn": {
-      "Description": "Fully-qualified domainname of the RedMine reverse-proxy host.",
-      "Type": "String"
-    },
-    "RedMineSharePath": {
-      "Default": "",
-      "Description": "Share-path of shared RedMine content.",
-      "Type": "String"
-    },
-    "RedMineShareType": {
-      "AllowedValues": [
-        "glusterfs",
-        "nfs"
-      ],
-      "Description": "Type of network share hosting shared RedMine content.",
       "Type": "String"
     },
     "RedmineHelperLocation": {
       "Description": "URL-root of location hosting ancilllary install files.",
       "Type": "String",
       "AllowedPattern": "^http://.*$|^https://.*$|^s3://.*$"
+    },
+    "RedmineOsPrepUrl": {
+      "AllowedPattern": "^$|^http://.*$|^https://.*$",
+      "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
+      "Type": "String"
+    }, 
+    "RedmineProxyFqdn": {
+      "Description": "Fully-qualified domainname of the RedMine reverse-proxy host.",
+      "Type": "String"
+    },
+    "RedmineSharePath": {
+      "Default": "",
+      "Description": "Share-path of shared RedMine content.",
+      "Type": "String"
+    },
+    "RedmineShareType": {
+      "AllowedValues": [
+        "glusterfs",
+        "nfs"
+      ],
+      "Description": "Type of network share hosting shared RedMine content.",
+      "Type": "String"
     },
     "SecurityGroupIds": {
       "Description": "List of security groups to apply to the instance(s)",
@@ -343,12 +421,13 @@
       "CreationPolicy": {
         "ResourceSignal": {
           "Count": { "Ref": "DesiredCapacity" },
-          "Timeout": "PT30M"
+          "Timeout": "PT15M"
         }
       },
       "Properties": {
         "DesiredCapacity": { "Ref": "DesiredCapacity" },
         "LaunchConfigurationName": { "Ref": "RedMineHost" },
+        "TargetGroupARNs": [ { "Ref" : "ElbArn" } ],
         "MaxSize": { "Ref": "MaxCapacity" },
         "MinSize": { "Ref": "MinCapacity" },
         "Tags": [
@@ -372,7 +451,7 @@
         "AutoScalingRollingUpdate": {
           "MaxBatchSize": "2",
           "MinInstancesInService": "1",
-          "PauseTime": "PT30M",
+          "PauseTime": "PT15M",
           "WaitOnResourceSignals": "true"
         }
       }
@@ -380,11 +459,146 @@
     "RedMineHost": {
       "Metadata": {
         "AWS::CloudFormation::Init": {
+          "admkey-install": {
+            "files": {
+              "/etc/cfn/scripts/admkey.sh": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "#!/bin/bash\n\n",
+                      "PROVHOME=$(getent passwd ",
+                      { "Ref": "ProvisionUser" },
+                      " | awk -F\":\" '{print $6}')\n",
+                      "\n",
+                      "install -b -m 000600 -o ",
+                      { "Ref": "ProvisionUser" },
+                      " -g ",
+                      { "Ref": "ProvisionUser" },
+                      " /etc/cfn/files/adminkeys.pub ${PROVHOME}/.ssh/authorized_keys\n",
+                      "\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              }
+            },
+            "commands": {
+              "1-admkey-install": {
+                "command": "bash -xe /tmp/admkey.sh"
+              }
+            }
+          },
+          "app-install": {
+            "commands": {
+              "1-get-app-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedmineAppinstallScript" },
+                      " -o redmine-appinstall.sh"
+                    ]
+                  ]
+                }
+              },
+              "2-run-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": "bash -xe redmine-appinstall.sh"
+              }
+            },
+            "files": {
+              "/etc/cfn/scripts/main_cf.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/main_cf.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/configuration_yml.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/configuration_yml.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/files/database.yml": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "production:\n",
+                      "  adapter: mysql2\n",
+                      "  database: ",
+                         { "Ref": "DbInstanceName" },
+                         "\n",
+                      "  host: localhost \n",
+                      "  # database user\n",
+                      "  username: ",
+                         { "Ref": "DbAdminName" },
+                         "\n",
+                      "  # password for user above\n",
+                      "  password: ",
+                         { "Ref": "DbAdminPass" } ,
+                         "\n",
+                      "  encoding: utf8\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000600",
+                "owner": "root"
+              },
+              "/etc/postfix/sasl_passwd": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/sasl_passwd"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000640",
+                "owner": "root"
+              }
+            }
+          },
           "configSets": {
             "launch": [
               "setup",
               "watchmaker-install",
               "watchmaker-launch",
+              {
+                "Fn::If": [
+                  "UseCfnAppInstaller",
+                  [
+                    "os-prep",
+                    "app-install",
+                    "ready-rc_local"
+                  ],
+                  { "Ref": "AWS::NoValue" }
+                ]
+              },
               "finalize",
               {
                 "Fn::If": [
@@ -405,6 +619,17 @@
               },
               "watchmaker-install",
               "watchmaker-update",
+              {
+                "Fn::If": [
+                  "UseCfnAppInstaller",
+                  [
+                    "os-prep",
+                    "app-install",
+                    "ready-rc_local"
+                  ],
+                  { "Ref": "AWS::NoValue" }
+                ]
+              },
               "finalize",
               {
                 "Fn::If": [
@@ -473,6 +698,166 @@
               }
             }
           },
+          "os-prep": {
+            "commands": {
+              "1-get-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedmineOsPrepUrl" },
+                      " -o redmine-osprep.sh"
+                    ]
+                  ]
+                }
+              },
+              "2-run-prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": "bash -xe redmine-osprep.sh"
+              }
+            }
+          },
+          "ready-rc_local": {
+            "commands": {
+              "1-enable-ruby": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'source /etc/profile.d/enable_rh-ruby24.sh' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "2-add-gem-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/GemStuff.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "3-add-passenger-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/Passenger_conf.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "4-git-remote-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/git_remote.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "5-rm-plugins-call": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'bash -xe ",
+                      "/etc/cfn/scripts/plugins.sh 2>&1 | ",
+                      "tee -a /var/log/rc_local.log' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "7-add-perm-change": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'chmod a-x /etc/rc.d/rc.local' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
+              "10-set_perm": {
+                "command": "chmod a+x /etc/rc.d/rc.local"
+              }
+            },
+            "files": {
+              "/etc/cfn/scripts/GemStuff.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/GemStuff.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/Passenger_conf.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/Passenger_conf.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/git_remote.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/git_remote.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/plugins.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/plugins.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              }
+            }
+          },
           "reboot": {
             "commands": {
               "10-reboot": {
@@ -481,6 +866,34 @@
             }
           },
           "setup": {
+            "commands": {
+              "1-fetch-os_prep-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedmineOsPrepUrl" },
+                      " -o redmine-osprep.sh"
+                    ]
+                  ]
+                }
+              },
+              "2-fetch-app-pre_reboot-script": {
+                "cwd": "/etc/cfn/scripts/",
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "curl -skL ",
+                      { "Ref": "RedmineAppinstallScript" },
+                      " -o redmine-appinstall.sh"
+                    ]
+                  ]
+                }
+              }
+            },
             "files": {
               "/etc/cfn/cfn-hup.conf": {
                 "content": {
@@ -590,6 +1003,79 @@
                 "mode": "000400",
                 "owner": "root"
               },
+              "/etc/cfn/RedMine.envs": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "RM_DB_ADMIN_NAME=",
+                       { "Ref": "DbAdminName"},
+                       "\n",
+                      "RM_DB_ADMIN_PASS=",
+                       { "Ref": "DbAdminPass" },
+                       "\n",
+                      "RM_DB_INSTANCE_NAME=",
+                       { "Ref": "DbInstanceName" },
+                       "\n",
+                      "RM_DB_FQDN=",
+                       { "Ref": "DbFqdn" },
+                       "\n",
+                      "RM_OS_PREP_SCRIPT=",
+                       { "Ref": "RedmineOsPrepUrl" },
+                       "\n",
+                      "RM_APP_PREP_SCRIPT=",
+                       { "Ref": "RedmineAppinstallScript" },
+                       "\n",
+                      "RM_BIN_VERS=",
+                       { "Ref": "RedmineBinaryVersion" },
+                       "\n",
+                      "RM_PROXY_FQDN=",
+                       { "Ref": "RedmineProxyFqdn" },
+                       "\n",
+                      "RM_PERSISTENT_SHARE_PATH=",
+                       { "Ref": "RedmineSharePath" },
+                       "\n",
+                      "RM_PERSISTENT_SHARE_TYPE=",
+                       { "Ref": "RedmineShareType" },
+                       "\n",
+                      "RM_HELPER_ROOT_URL=",
+                       { "Ref": "RedmineHelperLocation" },
+                       "\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000400",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/main_cf.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/main_cf.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/scripts/configuration_yml.sh": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/configuration_yml.sh"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              },
               "/etc/cfn/scripts/watchmaker-install.sh": {
                 "content": {
                   "Fn::Join": [
@@ -597,7 +1083,7 @@
                     [
                       "#!/bin/bash\n\n",
                       "PYPI_URL=",
-                      { "Ref": "PipIndexFips" },
+                      { "Ref": "PypiIndexUrl" },
                       "\n",
                       "pip install --index-url=\"$PYPI_URL\" wheel==0.29.0\n",
                       "pip install",
@@ -608,6 +1094,53 @@
                 },
                 "group": "root",
                 "mode": "000700",
+                "owner": "root"
+              },
+              "/etc/cfn/files/adminkeys.pub": {
+                "source": { "Ref": "AdminPubkeyURL" },
+                "group": "root",
+                "mode": "000600",
+                "owner": "root"
+              },
+              "/etc/cfn/files/database.yml": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "production:\n",
+                      "  adapter: mysql2\n",
+                      "  database: ",
+                         { "Ref": "DbInstanceName" },
+                         "\n",
+                      "  host: localhost \n",
+                      "  # database user\n",
+                      "  username: ",
+                         { "Ref": "DbAdminName" },
+                         "\n",
+                      "  # password for user above\n",
+                      "  password: ",
+                         { "Ref": "DbAdminPass" } ,
+                         "\n",
+                      "  encoding: utf8\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000600",
+                "owner": "root"
+              },
+              "/etc/cfn/files/sasl_passwd": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/sasl_passwd"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000640",
                 "owner": "root"
               }
             },
@@ -797,6 +1330,15 @@
             "Fn::Join": [
               "",
               [
+                "Content-Type: multipart/mixed; boundary=\"===============3585321300151562773==\"\n",
+                "MIME-Version: 1.0\n",
+                "\n",
+                "--===============3585321300151562773==\n",
+                "Content-Type: text/cloud-config; charset=\"us-ascii\"\n",
+                "MIME-Version: 1.0\n",
+                "Content-Transfer-Encoding: 7bit\n",
+                "Content-Disposition: attachment; filename=\"cloud.cfg\"\n",
+                "\n",
                 "#cloud-config\n",
                 "\n",
                 "system_info:\n",
@@ -814,6 +1356,21 @@
                 { "Ref": "Domainname" },
                 "\n",
                 "\n",
+                "write_files:\n",
+                "  - path: /home/systemd/system/cfn-hup.service\n",
+                "    content: |\n",
+                "      # Dummy Content\n",
+                "      [Unit]\n",
+                "      Description=CloudFormation update trigger daemon\n",
+                "      After=cloud-config.service\n",
+                "      \n",
+                "      [Service]\n",
+                "      Type=simple\n",
+                "      WorkingDirectory=/usr/bin/\n",
+                "      ExecStart=CFN_HUP_PATH\n",
+                "    permissions: \"000750\"\n",
+                "    owner: root:root\n",
+                "\n",
                 {
                   "Fn::If": [
                     "CreateAppVolume",
@@ -822,156 +1379,187 @@
                         "",
                         [
                           "bootcmd:\n",
-                          "  - cloud-init-per instance mkfs-bkupvolume mkfs -t ext4 ",
+                          "- cloud-init-per instance mkfs-appvolume mkfs -t ext4 ",
                           { "Ref": "AppVolumeDevice" },
-                          "\n",
                           "\n",
                           "mounts:\n",
-                          "  - [ ",
-                          "\"",
+                          "- [ ",
                           { "Ref": "AppVolumeDevice" },
-                          "\", ",
-                          "\"",
+                          ", ",
                           { "Ref": "AppVolumeMountPath" },
-                          "\", ",
-                          "\"auto\" ",
-                          "]\n"
+                          " ]\n"
+                        ]
+                      ]
+                    },
+                    { "Ref": "AWS::NoValue" }
+                  ]
+                },
+                "\n",
+                "--===============3585321300151562773==\n",
+                "Content-Type: text/x-shellscript; charset=\"us-ascii\"\n",
+                "MIME-Version: 1.0\n",
+                "Content-Transfer-Encoding: 7bit\n",
+                "Content-Disposition: attachment; filename=\"script.sh\"\n",
+                "\n",
+                "#!/bin/bash -xe\n\n",
+                "# CFN LaunchConfig Update Toggle: ",
+                { "Ref": "ToggleNewInstances" },
+                "\n\n",
+                "# Export cert bundle ENVs\n",
+                "export AWS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n",
+                "export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n\n",
+                "# Get pip (as needed)\n",
+                "if [[ $(which pip > /dev/null 2>&1 )$? -eq 0 ]]\n",
+                "then\n",
+                "   echo \"Found a pip executable in standard search PATH\"\n",
+                "else\n",
+                "   curl --silent --show-error --retry 5 -L ",
+                    { "Ref": "CfnGetPipUrl" },
+                    " | python - --index-url=",
+                    { "Ref": "PypiIndexUrl" },
+                "   \n\n",
+                "   # Add pip to path\n",
+                "   hash pip 2> /dev/null ||",
+                    " PATH=\"${PATH}:/usr/local/bin\"\n",
+                "fi\n",
+                "\n\n",
+                "# Upgrade pip and setuptools\n",
+                "PYPI_URL=",
+                { "Ref": "PypiIndexUrl" },
+                "\n",
+                "pip install",
+                " --index-url=\"$PYPI_URL\"",
+                " --upgrade pip setuptools\n\n",
+                "# Check for cfn-bootstrap components\n",
+                "if [[ $(rpm --quiet -q aws-cfn-bootstrap)$? -eq 0 ]]\n",
+                "then\n",
+                "   echo \"Found CFn utilities via aws-cfn-bootstrap RPM.\"\n",
+                "   CFN_HUP_PATH=$(rpm -ql aws-cfn-bootstrap | grep redhat/cfn-hup)\n",
+                "else\n",
+                "   # Fix python urllib3 warnings\n",
+                "   yum -y install gcc python-devel libffi-devel openssl-devel\n",
+                "   pip install",
+                "    --index-url=\"$PYPI_URL\"",
+                "    --upgrade pyopenssl ndg-httpsclient pyasn1\n\n",
+                "   # Get cfn utils\n",
+                "   pip install",
+                "    --index-url=\"$PYPI_URL\"",
+                "    --upgrade ",
+                { "Ref": "CfnBootstrapUtilsUrl" },
+                "   \n\n",
+                "   # Remove gcc now that it is no longer needed\n",
+                "   yum -y remove gcc --setopt=clean_requirements_on_remove=1\n\n",
+                "fi\n",
+                "\n\n",
+                "# Fixup cfn utils\n",
+                "INITDIR=$(find -L /opt/aws/apitools/cfn-init/init -name redhat ",
+                "2> /dev/null || echo /usr/init/redhat)\n",
+                "chmod 775 ${INITDIR}/cfn-hup\n",
+                "ln -f -s ${INITDIR}/cfn-hup /etc/rc.d/init.d/cfn-hup\n",
+                "chkconfig --add cfn-hup\n",
+                "chkconfig cfn-hup on\n",
+                "mkdir -p /opt/aws/bin\n",
+                "BINDIR=$(find -L /opt/aws/apitools/cfn-init -name bin ",
+                "2> /dev/null || echo /usr/bin)\n",
+                "for SCRIPT in cfn-elect-cmd-leader cfn-get-metadata cfn-hup ",
+                "cfn-init cfn-send-cmd-event cfn-send-cmd-result cfn-signal\n",
+                "do\n",
+                "  ln -s ${BINDIR}/${SCRIPT} /opt/aws/bin/${SCRIPT} 2> /dev/null || ",
+                "  echo Skipped symbolic link, /opt/aws/bin/${SCRIPT} already exists\n",
+                "done\n\n",
+                "# Add cfn-signal to path\n",
+                "hash cfn-signal 2> /dev/null || ",
+                "PATH=\"${PATH}:/usr/local/bin:/opt/aws/bin\"",
+                "\n\n",
+                "# Update cfn-bootstrapper hash method\n",
+                "printf 'Updating CFn hash-check method... '\n",
+                "PYVERS=$(python -c 'import sys ; ",
+                  "version=sys.version_info[:2]; ",
+                  "print(\"{0}.{1}\".format(*version))')\n",
+                "sed -i '/^[ \\t][ \\t]*self._etag/s/etag$/None/' ",
+                  "/usr/lib/python${PYVERS}/site-packages/cfnbootstrap",
+                  "/util.py && echo 'Success' || ",
+                  "err_exit 'Failed updating CFn hash-method'\n",
+                "\n\n",
+                "# Execute cfn-init\n",
+                "/opt/aws/bin/cfn-init -v -c launch",
+                " --stack ",
+                { "Ref": "AWS::StackName" },
+                " --resource RedMineHost",
+                {
+                  "Fn::If": [
+                    "AssignInstanceRole",
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          " --role ",
+                          { "Ref": "InstanceRole" }
                         ]
                       ]
                     },
                     ""
                   ]
                 },
-                "\n",
-                "runcmd:\n",
-                "  - |\n",
-                "    # CFN LaunchConfig Update Toggle: ",
-                "    export STACK_TOGGLE_VAL=\"",
-                        { "Ref": "ToggleNewInstances" },
-                     "\"\n",
-                "    \n",
-                "    # Export cert bundle ENVs\n",
-                "    export AWS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n",
-                "    export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n\n",
-                "    \n",
-                "    # Define our error-handler\n",
-                "    function err_exit {\n",
-                "     echo \"${1}\"\n",
-                "     logger -p kern.crit -t UserData \"${1}\"\n",
-                "     /opt/aws/bin/cfn-signal -e 1 --stack ",
-                      { "Ref": "AWS::StackName" },
-                      " --resource RedMineHost\n",
-                "     exit 1\n",
-                "    }\n",
-                "    # Install RPMs needed by the cfn-tools.\n",
-                "    yum --enablerepo=",
-                     { "Ref": "EpelRepo" },
-                     " install -y ",
-                     { "Ref": "PyStache" },
-                     " ",
-                     { "Ref": "PipRpm" },
-                     " || err_exit 'Could not install Cfn dependencies.'\n",
-                "    \n",
-                "    # Upgrade pip and setuptools\n",
-                "    PYPI_URL=",
-                     { "Ref": "PipIndexFips" },
-                     "\n",
-                "    pip install --index-url=\"$PYPI_URL\"",
-                     " --upgrade pip setuptools\n\n",
-                "    # Update cfn-bootstrapper hash method\n",
-                "    printf 'Updating CFn hash-check method... '\n",
-                "    PYVERS=$(python -c 'import sys;",
-                     " version=sys.version_info[:2];",
-                     " print(\"{0}.{1}\".format(*version))')\n",
-                "    sed -i '/^[ \\t][ \\t]*self._etag/s/etag$/None/'",
-                     " /usr/lib/python${PYVERS}/site-packages/cfnbootstrap",
-                     "/util.py && echo 'Success' || ",
-                     "err_exit 'Failed updating CFn hash-method'\n",
-                "    \n",
-                "    # Fixup cfn utils\n",
-                "    INITDIR=$(find -L /opt/aws/apitools/cfn-init/init -name ",
-                     "redhat 2> /dev/null || echo /usr/init/redhat)\n",
-                "    chmod 775 ${INITDIR}/cfn-hup\n",
-                "    ln -f -s ${INITDIR}/cfn-hup /etc/rc.d/init.d/cfn-hup\n",
-                "    chkconfig --add cfn-hup\n",
-                "    chkconfig cfn-hup on\n",
-                "    BINDIR=$(find -L /opt/aws/apitools/cfn-init -name bin ",
-                     "2> /dev/null || echo /usr/bin)\n",
-                "    for SCRIPT in cfn-elect-cmd-leader cfn-get-metadata ",
-                     "cfn-hup cfn-init cfn-send-cmd-event ",
-                     "cfn-send-cmd-result cfn-signal\n",
-                "    do\n",
-                "       ln -s ${BINDIR}/${SCRIPT} /opt/aws/bin/${SCRIPT} 2> ",
-                        "/dev/null || echo \"Skipped symbolic link, ",
-                        "/opt/aws/bin/${SCRIPT} already exists\"\n",
-                "    done\n",
-                "    \n",
-                "    # Add cfn-signal to path\n",
-                "    hash cfn-signal 2> /dev/null || ",
-                "    PATH=\"${PATH}:/usr/local/bin:/opt/aws/bin\"\n",
-                "    \n",
-                "    # Initialize the CFn subsystems\n",
-                "    /opt/aws/bin/cfn-init -v -c launch",
-                     " --stack ",
-                     { "Ref": "AWS::StackName" },
-                     " --resource RedMineHost",
-                     {
-                       "Fn::If": [
-                         "UseCfnUrl",
-                         {
-                           "Fn::Join": [
-                             "",
-                             [
-                               " --url ",
-                               { "Ref": "CfnEndpointUrl" }
-                             ]
-                           ]
-                         },
-                         ""
-                       ]
-                     },
-                     " --region ",
-                     { "Ref": "AWS::Region" },
-                     " ||",
-                     " ( echo 'ERROR: cfn-init failed! Aborting!' ;",
-                     " /opt/aws/bin/cfn-signal -e 1",
-                     "  --stack ",
-                     { "Ref": "AWS::StackName" },
-                     "  --resource RedMineHost",
-                     {
-                       "Fn::If": [
-                         "AssignInstanceRole",
-                         {
-                           "Fn::Join": [
-                             "",
-                             [
-                               " --role ", { "Ref": "InstanceRole" }
-                             ]
-                           ]
-                         },
-                         ""
-                       ]
-                     },
-                     {
-                       "Fn::If": [
-                         "UseCfnUrl",
-                         {
-                           "Fn::Join": [
-                             "",
-                             [
-                               " --url ",
-                               { "Ref": "CfnEndpointUrl" }
-                             ]
-                           ]
-                         },
-                         ""
+                {
+                  "Fn::If": [
+                    "UseCfnUrl",
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          " --url ",
+                          { "Ref": "CfnEndpointUrl" }
+                        ]
+                      ]
+                    },
+                    ""
+                  ]
+                },
+                " --region ",
+                { "Ref": "AWS::Region" },
+                " ||",
+                " ( echo 'ERROR: cfn-init failed! Aborting!';",
+                " /opt/aws/bin/cfn-signal -e 1",
+                "  --stack ",
+                { "Ref": "AWS::StackName" },
+                "  --resource RedMineASG",
+                {
+                  "Fn::If": [
+                    "AssignInstanceRole",
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          " --role ",
+                          { "Ref": "InstanceRole" }
+                        ]
+                      ]
+                    },
+                    ""
+                  ]
+                },
+                {
+                  "Fn::If": [
+                    "UseCfnUrl",
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          " --url ",
+                          { "Ref": "CfnEndpointUrl" }
+                        ]
+                      ]
+                    },
+                    ""
                   ]
                 },
                 "  --region ",
                 { "Ref": "AWS::Region" },
                 ";",
                 " exit 1",
-                " )\n\n"
+                " )\n\n",
+                "--===============3585321300151562773==--"
               ]
             ]
           }
