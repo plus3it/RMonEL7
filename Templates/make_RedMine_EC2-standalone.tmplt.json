@@ -11,6 +11,11 @@
         { "Fn::Equals": [ { "Ref": "NoPublicIp" }, "true" ] }
       ]
     },
+    "AttachSshKey": {
+      "Fn::Not": [
+        { "Fn::Equals": [ { "Ref": "KeyPairName" }, "" ] }
+      ]
+    },
     "CreateAppVolume": {
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "AppVolumeDevice" }, "" ] }
@@ -841,6 +846,17 @@
                   ]
                 }
               },
+              "8-add-completion_message": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'logger -t rc-local -p kern.notice -s \"NOTICE: Post-reboot actions completed.\"' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
               "10-set_perm": {
                 "command": "chmod a+x /etc/rc.d/rc.local"
               }
@@ -1043,7 +1059,13 @@
         },
         "ImageId": { "Ref": "AmiId" },
         "InstanceType": { "Ref": "InstanceType" },
-        "KeyName": { "Ref": "KeyPairName" },
+        "KeyPairName": {
+          "Fn::If": [
+            "AttachSshKey",
+            { "Ref": "KeyPairName" },
+            { "Ref": "AWS::NoValue" }
+          ]
+        },
         "NetworkInterfaces": [
           {
             "AssociatePublicIpAddress": {

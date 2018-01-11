@@ -149,6 +149,13 @@
       "MinValue": "5",
       "Type": "Number"
     },
+    "DbInstanceCount": {
+      "Default": "2",
+      "Description": "Number of cluster-nodes to deploy",
+      "MaxValue": "4",
+      "MinValue": "1",
+      "Type": "Number"
+    },
     "DbInstanceName": {
       "Description": "Instance-name of the RedMine database.",
       "MaxLength": "8",
@@ -215,13 +222,6 @@
       "Description": "URL to the child-template for creating the RedMine S3 bucket(s) IAM roles.",
       "Type": "String"
     },
-    "InstanceCount": {
-      "Default": "2",
-      "Description": "Number of cluster-nodes to deploy",
-      "MaxValue": "4",
-      "MinValue": "1",
-      "Type": "Number"
-    },
     "InstanceType": {
       "AllowedValues": [
         "t2.micro",
@@ -238,6 +238,7 @@
       "Type": "String"
     },
     "KeyPairName": {
+      "Default": "",
       "Description": "Public/private key pairs allow you to securely connect to your instance after it launches",
       "Type": "AWS::EC2::KeyPair::KeyName"
     },
@@ -534,7 +535,7 @@
               { "Ref": "ProtectedSubnets" }
             ]
           },
-          "InstanceCount": { "Ref": "InstanceCount" },
+          "InstanceCount": { "Ref": "DbInstanceCount" },
           "TargetVPC": { "Ref": "TargetVPC" }
         },
         "TemplateURL": { "Ref": "RdsTemplateUri" }

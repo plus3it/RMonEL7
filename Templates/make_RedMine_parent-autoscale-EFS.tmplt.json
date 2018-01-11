@@ -39,7 +39,10 @@
 	    "PipRpm",
 	    "PyStache",
 	    "PipIndexFips",
-	    "WatchmakerConfig"
+	    "WatchmakerConfig",
+            "DesiredCapacity",
+            "MaxCapacity",
+            "MinCapacity"
 	  ]
         },
         {
@@ -153,6 +156,13 @@
       "MinValue": "5",
       "Type": "Number"
     },
+    "DbInstanceCount": {
+      "Default": "2",
+      "Description": "Number of cluster-nodes to deploy",
+      "MaxValue": "4",
+      "MinValue": "1",
+      "Type": "Number"
+    },
     "DbInstanceName": {
       "Description": "Instance-name of the RedMine database.",
       "MaxLength": "8",
@@ -181,6 +191,11 @@
     "DbNodeName": {
       "Description": "NodeName of the RedMine database.",
       "Type": "String"
+    },
+    "DesiredCapacity": {
+      "Default": "1",
+      "Description": "Desired number of instances in the Autoscaling Group",
+      "Type": "Number"
     },
     "Domainname": {
       "ConstraintDescription": "An alphanumeric string to complete the domain portion of the instance's FQDN.",
@@ -214,31 +229,59 @@
       "Description": "URL to the child-template for creating the RedMine S3 bucket(s) IAM roles.",
       "Type": "String"
     },
-    "InstanceCount": {
-      "Default": "2",
-      "Description": "Number of cluster-nodes to deploy",
-      "MaxValue": "4",
-      "MinValue": "1",
-      "Type": "Number"
-    },
     "InstanceType": {
       "AllowedValues": [
         "t2.micro",
         "t2.small",
         "t2.medium",
         "t2.large",
+        "t2.xlarge",
+        "t2.2xlarge",
+        "m5.large",
+        "m5.xlarge",
+        "m5.2xlarge",
+        "m5.4xlarge",
+        "m4.large",
+        "m4.xlarge",
+        "m4.2xlarge",
+        "m4.4xlarge",
+        "m3.large",
+        "m3.xlarge",
+        "m3.2xlarge",
+        "c5.large",
+        "c5.xlarge",
+        "c5.2xlarge",
+        "c5.4xlarge",
+        "c5.9xlarge",
         "c4.large",
         "c4.xlarge",
-        "m4.large",
-        "m4.xlarge"
+        "c4.2xlarge",
+        "c4.4xlarge",
+        "c4.8xlarge",
+        "c3.large",
+        "c3.xlarge",
+        "c3.2xlarge",
+        "c3.4xlarge",
+        "c3.8xlarge"
       ],
       "Default": "t2.micro",
       "Description": "Amazon EC2 instance type",
       "Type": "String"
     },
     "KeyPairName": {
+      "Default": "",
       "Description": "Public/private key pairs allow you to securely connect to your instance after it launches",
-      "Type": "AWS::EC2::KeyPair::KeyName"
+      "Type": "String"
+    },
+    "MaxCapacity": {
+      "Default": "2",
+      "Description": "Maximum number of instances in the Autoscaling Group",
+      "Type": "Number"
+    },
+    "MinCapacity": {
+      "Default": "1",
+      "Description": "Minimum number of instances in the Autoscaling Group",
+      "Type": "Number"
     },
     "NoPublicIp": {
       "AllowedValues": [
@@ -565,7 +608,7 @@
               { "Ref": "ProtectedSubnets" }
             ]
           },
-          "InstanceCount": { "Ref": "InstanceCount" },
+          "InstanceCount": { "Ref": "DbInstanceCount" },
           "TargetVPC": { "Ref": "TargetVPC" }
         },
         "TemplateURL": { "Ref": "RdsTemplateUri" }

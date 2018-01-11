@@ -11,6 +11,11 @@
         { "Fn::Equals": [ { "Ref": "NoPublicIp" }, "true" ] }
       ]
     },
+    "AttachSshKey": {
+      "Fn::Not": [
+        { "Fn::Equals": [ { "Ref": "KeyPairName" }, "" ] }
+      ]
+    },
     "CreateAppVolume": {
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "AppVolumeDevice" }, "" ] }
@@ -274,8 +279,9 @@
       "Type": "String"
     },
     "KeyPairName": {
+      "Default": "",
       "Description": "Public/private key pairs allow you to securely connect to your instance after it launches",
-      "Type": "AWS::EC2::KeyPair::KeyName"
+      "Type": "String"
     },
     "MaxCapacity": {
       "Default": "2",
@@ -426,11 +432,25 @@
       },
       "Properties": {
         "DesiredCapacity": { "Ref": "DesiredCapacity" },
-        "LaunchConfigurationName": { "Ref": "RedMineHost" },
+        "LaunchConfigurationName": { "Ref": "RedMineLC" },
         "TargetGroupARNs": [ { "Ref" : "ElbArn" } ],
         "MaxSize": { "Ref": "MaxCapacity" },
         "MinSize": { "Ref": "MinCapacity" },
         "Tags": [
+          {
+            "Key": "Purpose",
+            "PropagateAtLaunch": "true",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "RedMine Autoscaling Group (",
+                  { "Ref": "AWS::StackName" },
+                  ")"
+                ]
+              ]
+            }
+          },
           {
             "Key": "Name",
             "PropagateAtLaunch": "true",
@@ -456,7 +476,7 @@
         }
       }
     },
-    "RedMineHost": {
+    "RedMineLC": {
       "Metadata": {
         "AWS::CloudFormation::Init": {
           "admkey-install": {
@@ -487,7 +507,7 @@
             },
             "commands": {
               "1-admkey-install": {
-                "command": "bash -xe /tmp/admkey.sh"
+                "command": "bash -xe /etc/cfn/scripts/admkey.sh"
               }
             }
           },
@@ -586,6 +606,7 @@
           "configSets": {
             "launch": [
               "setup",
+              "admkey-install",
               "watchmaker-install",
               "watchmaker-launch",
               {
@@ -610,6 +631,7 @@
             ],
             "update": [
               "setup",
+              "admkey-install",
               {
                 "Fn::If": [
                   "InstallUpdates",
@@ -795,6 +817,17 @@
                   ]
                 }
               },
+              "8-add-completion_message": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "echo 'logger -t rc-local -p kern.notice -s \"NOTICE: Post-reboot actions completed.\"' >> ",
+                      "/etc/rc.d/rc.local\n"
+                    ]
+                  ]
+                }
+              },
               "10-set_perm": {
                 "command": "chmod a+x /etc/rc.d/rc.local"
               }
@@ -957,11 +990,11 @@
                     [
                       "[cfn-auto-reloader-hook]\n",
                       "triggers=post.update\n",
-                      "path=Resources.RedMineHost.Metadata\n",
+                      "path=Resources.RedMineLC.Metadata\n",
                       "action=/opt/aws/bin/cfn-init -v -c update",
                       " --stack ",
                       { "Ref": "AWS::StackName" },
-                      " --resource RedMineHost",
+                      " --resource RedMineLC",
                       {
                         "Fn::If": [
                           "AssignInstanceRole",
@@ -1323,7 +1356,13 @@
         },
         "ImageId": { "Ref": "AmiId" },
         "InstanceType": { "Ref": "InstanceType" },
-        "KeyName": { "Ref": "KeyPairName" },
+        "KeyName": {
+          "Fn::If": [
+            "AttachSshKey",
+            { "Ref": "KeyPairName" },
+            { "Ref": "AWS::NoValue" }
+          ]
+        },
         "SecurityGroups": { "Ref": "SecurityGroupIds" },
         "UserData": {
           "Fn::Base64": {
@@ -1485,7 +1524,7 @@
                 "/opt/aws/bin/cfn-init -v -c launch",
                 " --stack ",
                 { "Ref": "AWS::StackName" },
-                " --resource RedMineHost",
+                " --resource RedMineLC",
                 {
                   "Fn::If": [
                     "AssignInstanceRole",
