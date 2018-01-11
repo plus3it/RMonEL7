@@ -176,7 +176,7 @@
       "Type": "String"
     },
     "CfnBootstrapUtilsUrl": {
-      "AllowedPattern": "^http[s]?://.*\\.tar\\.gz$",
+      "AllowedPattern": "^http[s]?://.*\\.tar\\.gz$|^$",
       "Default": "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
       "Description": "(Optional - if AMI contains cfn-bootstrap) URL to aws-cfn-bootstrap-latest.tar.gz",
       "Type": "String"
@@ -188,7 +188,7 @@
       "Type": "String"
     },
     "CfnGetPipUrl": {
-      "AllowedPattern": "^http[s]?://.*\\.py$",
+      "AllowedPattern": "^http[s]?://.*\\.py$|^$",
       "Default": "https://bootstrap.pypa.io/get-pip.py",
       "Description": "(Optional - if AMI contains cfn-bootstrap) URL to get-pip.py",
       "Type": "String"

@@ -447,7 +447,7 @@
           "MinCapacity": "1",
           "NoPublicIp": "true",
           "NoReboot": "false",
-          "NoUpdates": "fales",
+          "NoUpdates": { "Ref": "NoUpdates" },
           "ProvisionUser": { "Ref": "ProvisionUser" },
           "PypiIndexUrl": { "Ref": "PipIndexFips" },
           "RedmineAppinstallScript": { "Ref": "RedmineAppinstallScript" },
