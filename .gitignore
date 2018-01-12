@@ -5,3 +5,4 @@
 *.params.json
 *.parm[s]*.json
 *.parms.json
+Private/*

@@ -1,0 +1,5 @@
+# File-Contents Migration
+
+If your current RedMine installation contains data that is hosted on its local filesystem (e.g., images, uploaded files and other attachments), it will be necessary to manually migrate this data from your old RedMine site to the new RedMine-hosting EC2 instance. The RedMine installation created by these templates and scripts store these files in the `/var/www/redmine/files/` directory.
+
+This `/var/www/redmine/files/` directory is actually an NFS-mounted share. The NFS share is hosted via the EFS service. This service helps ensure high availability of the stored files. Externalizing the files to a network-share also means that the RedMine-hosting EC2 instance can be arbitrarily replaced without having to perform any kinds of restore operations prior to files becoming available. Translation: once migrated files are moved onto this share, they continue to remain available within the new RedMine domain even as the RedMine-hosting EC2 instance is replaced due to upgrades, instance failures or other instance-replacing/destroying maintenance tasks.
