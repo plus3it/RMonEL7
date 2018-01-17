@@ -268,6 +268,10 @@ yum install -y parted lvm2 httpd mariadb mariadb-server mariadb-devel \
 logit "Creating temporary index.html..."
 cat << EOF > /var/www/html/index.html
 <html>
+  <head>
+    <title>RedMine Rebuild In Progress</title>
+    <meta http-equiv="refresh" content="30" />
+  </head>
   <body>
     <div style="width: 100%; font-size: 40px; font-weight: bold; text-align: cen
 ter;">

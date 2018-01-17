@@ -58,11 +58,11 @@
   },
   "Parameters": {
     "DbAdminName": {
-      "Description": "Name of the Artifactory master database-user.",
+      "Description": "Name of the RedMine master database-user.",
       "Type": "String"
     },
     "DbAdminPass": {
-      "Description": "Password of the Artifactory master database-user.",
+      "Description": "Password of the RedMine master database-user.",
       "NoEcho": "True",
       "Type": "String"
     },
