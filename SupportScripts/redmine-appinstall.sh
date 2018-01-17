@@ -168,7 +168,7 @@ echo "Making sure ELB test-file is still visible"
 cp -al /var/www/html/ELBtest.txt /var/www/redmine/public/
 
 # Make sure Apache has appropriate rights to RM content
-chown -R apache:apache /var/www/redmine
+find /var/www/redmine ! -user apache | xargs chown apache:apache
 
 systemctl restart httpd
 
