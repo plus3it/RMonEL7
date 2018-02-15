@@ -22,28 +22,28 @@
             "default": "Application-Host Parameters"
           },
           "Parameters": [
-	    "InstanceType",
+            "InstanceType",
             "AmiId",
-	    "Hostname",
-	    "Domainname",
-	    "ProvisionUser",
+            "Hostname",
+            "Domainname",
+            "ProvisionUser",
             "KeyPairName",
             "AdminPubkeyURL",
             "CfnResourceBucket",
             "SubnetId",
-	    "NoPublicIp",
-	    "PrivateIp",
-	    "NoReboot",
-	    "NoUpdates",
-	    "EpelRepo",
-	    "PipRpm",
-	    "PyStache",
-	    "PipIndexFips",
-	    "WatchmakerConfig",
+            "NoPublicIp",
+            "PrivateIp",
+            "NoReboot",
+            "NoUpdates",
+            "EpelRepo",
+            "PipRpm",
+            "PyStache",
+            "PipIndexFips",
+            "WatchmakerConfig",
             "DesiredCapacity",
             "MaxCapacity",
             "MinCapacity"
-	  ]
+          ]
         },
         {
           "Label": {
@@ -64,13 +64,13 @@
             "default": "RedMine Setup"
           },
           "Parameters": [
-	    "RedmineOsPrepUrl",
-	    "RedmineAppinstallScript",
-	    "RedmineBinaryVersion",
-	    "RedmineHelperLocation",
-	    "RedmineProxyFqdn",
-	    "RedmineSharePath"
-	  ]
+            "RedmineOsPrepUrl",
+            "RedmineAppinstallScript",
+            "RedmineBinaryVersion",
+            "RedmineHelperLocation",
+            "RedmineProxyFqdn",
+            "RedmineSharePath"
+          ]
         },
         {
           "Label": {
@@ -459,6 +459,9 @@
           "AdminPubkeyURL": { "Ref": "AdminPubkeyURL" },
           "AmiId": { "Ref": "AmiId" },
           "AppVolumeDevice": "",
+          "BackupBucket": {
+            "Fn::GetAtt": [ "S3Res", "Outputs.BackupBucket" ]
+          },
           "CfnBootstrapUtilsUrl": "",
           "CfnEndpointUrl": {
             "Fn::Join": [
@@ -479,11 +482,17 @@
           "DbInstanceName": { "Ref": "DbInstanceName" },
           "DesiredCapacity": "1",
           "Domainname": { "Ref": "Domainname" },
+          "EpelRepo": { "Ref": "EpelRepo"},
           "ElbArn": {
             "Fn::GetAtt": [ "ElbRes", "Outputs.RedmineAlbTgroupArn" ]
           },
           "Hostname": { "Ref": "Hostname" },
-          "InstanceRole": "",
+          "InstanceRole": {
+            "Fn::GetAtt": [ "IamRes", "Outputs.InstanceRole" ]
+          },
+          "InstanceRoleProfile": {
+            "Fn::GetAtt": [ "IamRes", "Outputs.InstanceRoleProfile" ]
+          },
           "InstanceType": { "Ref": "InstanceType" },
           "KeyPairName": { "Ref": "KeyPairName" },
           "MaxCapacity": "2",
@@ -491,6 +500,7 @@
           "NoPublicIp": "true",
           "NoReboot": "false",
           "NoUpdates": { "Ref": "NoUpdates" },
+          "PipRpm": { "Ref": "PipRpm" },
           "ProvisionUser": { "Ref": "ProvisionUser" },
           "PypiIndexUrl": { "Ref": "PipIndexFips" },
           "RedmineAppinstallScript": { "Ref": "RedmineAppinstallScript" },
