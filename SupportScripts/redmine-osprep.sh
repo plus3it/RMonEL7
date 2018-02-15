@@ -79,10 +79,10 @@ function NfsSetup {
       if [[ ! -e /etc/auto.direct ]]
       then
          (
-           printf "/var/www/redmine/files\t${NFSOPTS}\t"
-           printf "${RM_PERSISTENT_SHARE_PATH}/files\n"
-           printf "/var/www/redmine/Repositories\t${NFSOPTS}\t"
-           printf "${RM_PERSISTENT_SHARE_PATH}/Repositories\n"
+           printf "/var/www/redmine/files\t%s\t" "${NFSOPTS}"
+           printf "%s/files\n" "${RM_PERSISTENT_SHARE_PATH}"
+           printf "/var/www/redmine/Repositories\t%s\t" "${NFSOPTS}"
+           printf "%s/Repositories\n" "${RM_PERSISTENT_SHARE_PATH}"
           ) >> /etc/auto.direct
           chcon --reference=/etc/auto.master /etc/auto.direct
       fi
