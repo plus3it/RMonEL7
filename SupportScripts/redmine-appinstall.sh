@@ -219,13 +219,3 @@ else
       curl -s -L "${RECONSURI}"/Passenger_conf.sh | /bin/bash -
    fi
 fi
-
-## # Install git-remote plugin
-## echo "Fetching git-remote install/config tasks..."
-## curl -s -L ${RECONSURI}/git_remote.sh | /bin/bash -
-## 
-## # Install RedMine plugin-group:
-## curl -s -L ${RECONSURI}/plugins.sh | /bin/bash -
-## 
-## # Reboot so everything's there...
-## /sbin/shutdown -r +1 "Rebooting to finalize configs"
