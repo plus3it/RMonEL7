@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2015
+# shellcheck disable=SC2015,SC2086
 #
 # Script to handle installation/configuration of the RedMine
 # web-application
@@ -15,11 +15,6 @@ do
 done < /etc/cfn/RedMine.envs
 RMVERS="${RM_BIN_VERS}"
 RECONSURI="${RM_HELPER_ROOT_URL}"
-FWSVCS=(
-      ssh
-      http
-      https
-   )
 
 # Need to set this lest the default umask make our lives miserable
 umask 022
@@ -89,8 +84,10 @@ yum erase -y ruby
 yum install -y rh-ruby24 rh-ruby24\*dev\*
 
 # Enable new Ruby in current process-space
+# shellcheck disable=SC1091
 source /opt/rh/rh-ruby24/enable
 export PATH=${PATH}:/opt/rh/rh-ruby24/root/usr/local/bin
+# shellcheck disable=SC2155,SC2016
 export X_SCLS="$(scl enable rh-ruby24 'echo $X_SCLS')"
 
 # Permanently-enable new Ruby
@@ -122,12 +119,12 @@ then
    bash -xe /etc/cfn/scripts/main_cf.sh
 else
    echo "Fetching Postix-config tasks..."
-   curl -s -L ${RECONSURI}/main_cf.sh | /bin/bash -
+   curl -s -L "${RECONSURI}"/main_cf.sh | /bin/bash -
 fi
 
 # Grab and stage RedMine archive
 (
-  cd /tmp && curl -L http://www.redmine.org/releases/${RMVERS}.tar.gz | \
+  cd /tmp && curl -L http://www.redmine.org/releases/"${RMVERS}".tar.gz | \
   tar zxvf -
 )
 
@@ -138,7 +135,7 @@ then
    cd /tmp/"${RMVERS}" && tar cf - . | ( cd /var/www/redmine && tar xf - )
   )
 else
-   mv ${RMVERS} /var/www/redmine
+   mv "${RMVERS}" /var/www/redmine
 fi
 
 # Write standard RedMine main config (via add-on script)
@@ -148,7 +145,7 @@ then
    bash -xe /etc/cfn/scripts/configuration_yml.sh
 else
    echo "Fetching/running RedMine main config tasks..."
-   curl -s -L ${RECONSURI}/configuration_yml.sh | /bin/bash -
+   curl -s -L "${RECONSURI}"/configuration_yml.sh | /bin/bash -
 fi
 
 # Write standard (temporary) RedMine DB-config
@@ -160,7 +157,8 @@ then
      /var/www/redmine/config/database.yml
 else
    echo "Writing RedMine's local database config info..."
-   curl -s -L ${RECONSURI}/database.yml -o /var/www/redmine/config/database.yml
+   curl -s -L "${RECONSURI}"/database.yml \
+     -o /var/www/redmine/config/database.yml
 fi
 
 # Ready the ELB-tester for new read-location
@@ -168,7 +166,8 @@ echo "Making sure ELB test-file is still visible"
 cp -al /var/www/html/ELBtest.txt /var/www/redmine/public/
 
 # Make sure Apache has appropriate rights to RM content
-chown -R apache:apache /var/www/redmine
+# shellcheck disable=SC2038
+find /var/www/redmine ! -user apache | xargs chown apache:apache
 
 systemctl restart httpd
 
@@ -189,7 +188,7 @@ then
       printf "\t- Removing FIPS kernel RPMs... "
       yum -q erase -y dracut-fips\* && echo "Success." || echo "Failed."
       printf "\t- Backing up current boot-kernel... "
-      mv -v /boot/initramfs-$(uname -r).img{,.FIPS-bak} && \
+      mv -v /boot/initramfs-"$(uname -r)".img{,.FIPS-bak} && \
         echo "Success." || echo "Failed."
       printf "\t- Creating new boot-kernel... "
       dracut && echo "Success." || echo "Failed."
@@ -207,7 +206,7 @@ else
       bash -xe /etc/cfn/scripts/GemStuff.sh
    else
       echo "Fetching/executing Ruby-gem tasks..."
-      curl -L ${RECONSURI}/GemStuff.sh | /bin/bash -
+      curl -L "${RECONSURI}"/GemStuff.sh | /bin/bash -
    fi
 
    # Ready for Passenger setup
@@ -217,16 +216,6 @@ else
       bash -xe /etc/cfn/scripts/Passenger_conf.sh
    else
       echo "Fetching/executing Passenger httpd-config tasks..."
-      curl -s -L ${RECONSURI}/Passenger_conf.sh | /bin/bash -
+      curl -s -L "${RECONSURI}"/Passenger_conf.sh | /bin/bash -
    fi
 fi
-
-## # Install git-remote plugin
-## echo "Fetching git-remote install/config tasks..."
-## curl -s -L ${RECONSURI}/git_remote.sh | /bin/bash -
-## 
-## # Install RedMine plugin-group:
-## curl -s -L ${RECONSURI}/plugins.sh | /bin/bash -
-## 
-## # Reboot so everything's there...
-## /sbin/shutdown -r +1 "Rebooting to finalize configs"

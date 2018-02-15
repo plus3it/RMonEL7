@@ -40,3 +40,6 @@ Data protection is currently only provided within the RDS context. EFS is genera
 ## Contribution and Other Guidelines
 
 Please see the guidlines in the [docs](docs) directory.
+
+
+![Build Status](https://travis-ci.org/plus3it/RMonEL7.svg?branch=master)

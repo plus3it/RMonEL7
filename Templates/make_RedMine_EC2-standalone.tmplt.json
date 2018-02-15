@@ -21,6 +21,34 @@
         { "Fn::Equals": [ { "Ref": "AppVolumeDevice" }, "" ] }
       ]
     },
+    "NotGenFive": {
+      "Fn::Not": [
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                { "Fn::Select": [
+                    "0",
+                    { "Fn::Split": [ ".", { "Ref": "InstanceType" } ] }
+                  ]
+                },
+                "c5"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                { "Fn::Select": [
+                    "0",
+                    { "Fn::Split": [ ".", { "Ref": "InstanceType" } ] }
+                  ]
+                },
+                "m5"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "Reboot": {
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "NoReboot" }, "true" ] }
@@ -48,15 +76,14 @@
   },
   "Description": "This template deploys a STIG-hardened Enterprise Linux 7 instance to host the RedMine service's web-tier.",
   "Mappings": {
-    "Distro2RootDevice": {
-      "AmazonLinux": {
-        "DeviceName": "xvda"
+    "InstanceTypeCapabilities": {
+      "IsGenFive": {
+        "ExternDeviceName": "/dev/xvdf",
+        "InternDeviceName": "/dev/nvme1n1"
       },
-      "CentOS": {
-        "DeviceName": "sda1"
-      },
-      "RedHat": {
-        "DeviceName": "sda1"
+      "PreGenFive": {
+        "ExternDeviceName": "/dev/xvdf",
+        "InternDeviceName": "/dev/xvdf"
       }
     }
   },
@@ -357,13 +384,13 @@
         "AWS::CloudFormation::Init": {
           "admkey-install": {
             "files": {
-              "/tmp/adminkeys.pub": {
+              "/etc/cfn/files/adminkeys.pub": {
                 "source": { "Ref": "AdminPubkeyURL" },
                 "group": "root",
                 "mode": "000600",
                 "owner": "root"
               },
-              "/tmp/admkey.sh": {
+              "/etc/cfn/scripts/admkey.sh": {
                 "content": {
                   "Fn::Join": [
                     "",
@@ -377,7 +404,7 @@
                       { "Ref": "ProvisionUser" },
                       " -g ",
                       { "Ref": "ProvisionUser" },
-                      " /tmp/adminkeys.pub ${PROVHOME}/.ssh/authorized_keys\n",
+                      " /etc/cfn/files/adminkeys.pub ${PROVHOME}/.ssh/authorized_keys\n",
                       "\n"
                     ]
                   ]
@@ -389,7 +416,7 @@
             },
             "commands": {
               "1-admkey-install": {
-                "command": "bash -xe /tmp/admkey.sh"
+                "command": "bash -xe /etc/cfn/scripts/admkey.sh"
               }
             }
           },
@@ -614,13 +641,13 @@
                 "mode": "000700",
                 "owner": "root"
               },
-              "/tmp/adminkeys.pub": {
+              "/etc/cfn/files/adminkeys.pub": {
                 "group": "root",
                 "mode": "000600",
                 "owner": "root",
                 "source": { "Ref": "AdminPubkeyURL" }
               },
-              "/tmp/admkey.sh": {
+              "/etc/cfn/scripts/admkey.sh": {
                 "content": {
                   "Fn::Join": [
                     "",
@@ -634,7 +661,7 @@
                       { "Ref": "ProvisionUser" },
                       " -g ",
                       { "Ref": "ProvisionUser" },
-                      " /tmp/adminkeys.pub ${PROVHOME}/.ssh/authorized_keys\n",
+                      " /etc/cfn/files/adminkeys.pub ${PROVHOME}/.ssh/authorized_keys\n",
                       "\n"
                     ]
                   ]
@@ -1039,7 +1066,25 @@
             "Fn::If": [
               "CreateAppVolume",
               {
-                "DeviceName": { "Ref": "AppVolumeDevice" },
+                "DeviceName": {
+                  "Fn::If": [
+                    "NotGenFive",
+                    {
+                      "Fn::FindInMap": [
+                         "InstanceTypeCapabilities",
+                         "PreGenFive",
+                         "ExternDeviceName"
+                      ]
+                    },
+                    {
+                      "Fn::FindInMap": [
+                        "InstanceTypeCapabilities",
+                        "IsGenFive",
+                        "ExternDeviceName"
+                      ]
+                    }
+                  ]
+                },
                 "Ebs": {
                   "DeleteOnTermination": "true",
                   "VolumeSize": { "Ref": "AppVolumeSize" },
@@ -1124,13 +1169,49 @@
                         [
                           "bootcmd:\n",
                           "  - cloud-init-per instance mkfs-bkupvolume mkfs -t ext4 ",
-                          { "Ref": "AppVolumeDevice" },
+                          {
+                            "Fn::If": [
+                              "NotGenFive",
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "PreGenFive",
+                                  "InternDeviceName"
+                                ]
+                              },
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "IsGenFive",
+                                  "InternDeviceName"
+                                ]
+                              }
+                            ]
+                          },
                           "\n",
                           "\n",
                           "mounts:\n",
                           "  - [ ",
                           "\"",
-                          { "Ref": "AppVolumeDevice" },
+                          {
+                            "Fn::If": [
+                              "NotGenFive",
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "PreGenFive",
+                                  "InternDeviceName"
+                                ]
+                              },
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "IsGenFive",
+                                  "InternDeviceName"
+                                ]
+                              }
+                            ]
+                          },
                           "\", ",
                           "\"",
                           { "Ref": "AppVolumeMountPath" },

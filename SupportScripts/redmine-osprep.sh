@@ -79,10 +79,10 @@ function NfsSetup {
       if [[ ! -e /etc/auto.direct ]]
       then
          (
-           printf "/var/www/redmine/files\t${NFSOPTS}\t"
-           printf "${RM_PERSISTENT_SHARE_PATH}/files\n"
-           printf "/var/www/redmine/Repositories\t${NFSOPTS}\t"
-           printf "${RM_PERSISTENT_SHARE_PATH}/Repositories\n"
+           printf "/var/www/redmine/files\t%s\t" "${NFSOPTS}"
+           printf "%s/files\n" "${RM_PERSISTENT_SHARE_PATH}"
+           printf "/var/www/redmine/Repositories\t%s\t" "${NFSOPTS}"
+           printf "%s/Repositories\n" "${RM_PERSISTENT_SHARE_PATH}"
           ) >> /etc/auto.direct
           chcon --reference=/etc/auto.master /etc/auto.direct
       fi
@@ -268,6 +268,10 @@ yum install -y parted lvm2 httpd mariadb mariadb-server mariadb-devel \
 logit "Creating temporary index.html..."
 cat << EOF > /var/www/html/index.html
 <html>
+  <head>
+    <title>RedMine Rebuild In Progress</title>
+    <meta http-equiv="refresh" content="30" />
+  </head>
   <body>
     <div style="width: 100%; font-size: 40px; font-weight: bold; text-align: cen
 ter;">
