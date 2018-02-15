@@ -44,7 +44,7 @@ case $(rpm -qf /etc/redhat-release --qf '%{name}') in
             sed -e :a -e '$!N; s/\n/ /; ta'
          )
       logit "Ensure that SCL repos are available"
-      yum install -y "${SCLRPMS}" && logit "Success" || \
+      yum install -y ${SCLRPMS} && logit "Success" || \
          err_exit "Failed to install SCL for CentOS"
       ;;
    redhat-release-server)
