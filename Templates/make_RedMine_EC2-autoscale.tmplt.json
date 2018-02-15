@@ -26,6 +26,34 @@
         { "Fn::Equals": [ { "Ref": "NoUpdates" }, "true" ] }
       ]
     },
+    "NotGenFive": {
+      "Fn::Not": [
+        {
+          "Fn::Or": [
+            {
+              "Fn::Equals": [
+                { "Fn::Select": [
+                    "0",
+                    { "Fn::Split": [ ".", { "Ref": "InstanceType" } ] }
+                  ]
+                },
+                "c5"
+              ]
+            },
+            {
+              "Fn::Equals": [
+                { "Fn::Select": [
+                    "0",
+                    { "Fn::Split": [ ".", { "Ref": "InstanceType" } ] }
+                  ]
+                },
+                "m5"
+              ]
+            }
+          ]
+        }
+      ]
+    },
     "Reboot": {
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "NoReboot" }, "true" ] }
@@ -58,7 +86,18 @@
     }
   },
   "Description": "This template creates an Autoscaling Group and Launch Configuration to deploy STIG-hardened Enterprise Linux 7 instances to host the RedMine service's web-tier.",
-  "Mappings": {},
+  "Mappings": {
+    "InstanceTypeCapabilities": {
+      "IsGenFive": {
+        "ExternDeviceName": "/dev/xvdf",
+        "InternDeviceName": "/dev/nvme1n1"
+      },
+      "PreGenFive": {
+        "ExternDeviceName": "/dev/xvdf",
+        "InternDeviceName": "/dev/xvdf"
+      }
+    }
+  },
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [
@@ -1336,7 +1375,25 @@
             "Fn::If": [
               "CreateAppVolume",
               {
-                "DeviceName": { "Ref": "AppVolumeDevice" },
+                "DeviceName": {
+                  "Fn::If": [
+                    "NotGenFive",
+                    {
+                      "Fn::FindInMap": [
+                         "InstanceTypeCapabilities",
+                         "PreGenFive",
+                         "ExternDeviceName"
+                      ]
+                    },
+                    {
+                      "Fn::FindInMap": [
+                        "InstanceTypeCapabilities",
+                        "IsGenFive",
+                        "ExternDeviceName"
+                      ]
+                    }
+                  ]
+                },
                 "Ebs": {
                   "DeleteOnTermination": "true",
                   "VolumeSize": { "Ref": "AppVolumeSize" },
@@ -1419,11 +1476,48 @@
                         [
                           "bootcmd:\n",
                           "- cloud-init-per instance mkfs-appvolume mkfs -t ext4 ",
-                          { "Ref": "AppVolumeDevice" },
+                          {
+                            "Fn::If": [
+                              "NotGenFive",
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "PreGenFive",
+                                  "InternDeviceName"
+                                ]
+                              },
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "IsGenFive",
+                                  "InternDeviceName"
+                                ]
+                              }
+                            ]
+                          },
+                          "\n",
                           "\n",
                           "mounts:\n",
                           "- [ ",
-                          { "Ref": "AppVolumeDevice" },
+                          {
+                            "Fn::If": [
+                              "NotGenFive",
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "PreGenFive",
+                                  "InternDeviceName"
+                                ]
+                              },
+                              {
+                                "Fn::FindInMap": [
+                                  "InstanceTypeCapabilities",
+                                  "IsGenFive",
+                                  "InternDeviceName"
+                                ]
+                              }
+                            ]
+                          },
                           ", ",
                           { "Ref": "AppVolumeMountPath" },
                           " ]\n"
