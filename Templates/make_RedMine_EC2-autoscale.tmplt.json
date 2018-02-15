@@ -117,6 +117,7 @@
             "KeyPairName",
             "AdminPubkeyURL",
             "InstanceRole",
+            "InstanceRoleProfile",
             "SecurityGroupIds",
             "SubnetIds",
             "AppVolumeDevice",
@@ -219,6 +220,10 @@
       "Description": "Type of EBS volume to create. Ignored if \"AppVolumeDevice\" is blank",
       "Type": "String"
     },
+    "BackupBucket": {
+      "Description": "S3 Bucket to host backups of GitLab config-data",
+      "Type": "String"
+    },
     "CfnBootstrapUtilsUrl": {
       "AllowedPattern": "^http[s]?://.*\\.tar\\.gz$|^$",
       "Default": "https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz",
@@ -268,6 +273,13 @@
       "Description": "Elastic Load-Balancer to associate EC2 resources to.",
       "Type": "String"
     },
+    "EpelRepo": {
+      "AllowedPattern": "^[a-z][a-z0-9-]*$",
+      "ConstraintDescription": "An alphanumeric string that represents the EPEL yum repo's label.",
+      "Default": "epel",
+      "Description": "Name of network's EPEL repo.",
+      "Type": "String"
+    },
     "Hostname": {
       "ConstraintDescription": "An alphanumeric string to complete the hostname portion of the instance's FQDN.",
       "Description": "Node-name for RedMine's hostname and DNS record",
@@ -275,7 +287,12 @@
     },
     "InstanceRole": {
       "Default": "",
-      "Description": "(Optional) IAM instance role to apply to the instance(s)",
+      "Description": "(Optional) IAM instance-role name used by cfn-init to authenticate to the CloudFormation endpoint.",
+      "Type": "String"
+    },
+    "InstanceRoleProfile": {
+      "Default": "",
+      "Description": "(Optional) IAM instance-role profile to apply to the instance(s)",
       "Type": "String"
     },
     "InstanceType": {
@@ -359,6 +376,11 @@
       "Description": "Controls whether to run yum update during a stack update (on the initial instance launch, Watchmaker _always_ installs updates)",
       "Type": "String"
     },
+    "PipRpm": {
+      "Default": "python2-pip",
+      "Description": "Name of preferred pip RPM.",
+      "Type": "String"
+    },
     "ProvisionUser": {
       "AllowedPattern": "[a-z0-9]{6,12}+",
       "ConstraintDescription": "Alphanumeric string between 6 and 12 characters.",
@@ -370,6 +392,11 @@
       "AllowedPattern": "^http[s]?://.*$",
       "Default": "https://pypi.org/simple",
       "Description": "URL to the PyPi Index",
+      "Type": "String"
+    },
+    "PyStache": {
+      "Default": "pystache",
+      "Description": "Name of preferred pystache RPM.",
       "Type": "String"
     },
     "RedmineAppinstallScript": {
@@ -1080,6 +1107,9 @@
                   "Fn::Join": [
                     "",
                     [
+                      "RM_BACKUP_BUCKET=",
+                       { "Ref": "BackupBucket" },
+                       "\n",
                       "RM_DB_ADMIN_NAME=",
                        { "Ref": "DbAdminName"},
                        "\n",
@@ -1407,7 +1437,7 @@
         "IamInstanceProfile": {
           "Fn::If": [
             "AssignInstanceRole",
-            { "Ref": "InstanceRole" },
+            { "Ref": "InstanceRoleProfile" },
             { "Ref": "AWS::NoValue" }
           ]
         },
@@ -1541,20 +1571,37 @@
                 "# Export cert bundle ENVs\n",
                 "export AWS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n",
                 "export REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt\n\n",
-                "# Get pip (as needed)\n",
-                "if [[ $(which pip > /dev/null 2>&1 )$? -eq 0 ]]\n",
-                "then\n",
-                "   echo \"Found a pip executable in standard search PATH\"\n",
-                "else\n",
-                "   curl --silent --show-error --retry 5 -L ",
-                    { "Ref": "CfnGetPipUrl" },
-                    " | python - --index-url=",
-                    { "Ref": "PypiIndexUrl" },
-                "   \n\n",
-                "   # Add pip to path\n",
-                "   hash pip 2> /dev/null ||",
-                    " PATH=\"${PATH}:/usr/local/bin\"\n",
-                "fi\n",
+                "\n",
+                "# Define our error-handler\n",
+                "function err_exit {\n",
+                "   echo \"${1}\"\n",
+                "   logger -p kern.crit -t UserData \"${1}\"\n",
+                "   /opt/aws/bin/cfn-signal -e 1 --stack ",
+                    { "Ref": "AWS::StackName" },
+                    " --resource RedMineLC\n",
+                "   exit 1\n",
+                "}\n",
+                "\n",
+                "# Install RPMs needed by the cfn-tools.\n",
+                "yum --enablerepo=",
+                  { "Ref": "EpelRepo" },
+                  " install -y ",
+                  { "Ref": "PyStache" },
+                  " ",
+                  { "Ref": "PipRpm" },
+                  " || err_exit 'Could not install Cfn dependencies.'\n",
+                "\n",
+                "# Update cfn-bootstrapper hash method\n",
+                "PYVERS=$(python -c 'import sys;",
+                " version=sys.version_info[:2];",
+                " print(\"{0}.{1}\".format(*version))')\n",
+                "sed -i '/^[ \\t][ \\t]*self._etag/s/etag$/None/'",
+                " /usr/lib/python${PYVERS}/site-packages/cfnbootstrap",
+                "/util.py\n",
+                "\n",
+                "# Add pip to path\n",
+                "hash pip 2> /dev/null ||",
+                "PATH=\"${PATH}:/usr/local/bin\"\n",
                 "\n\n",
                 "# Upgrade pip and setuptools\n",
                 "PYPI_URL=",
@@ -1563,27 +1610,6 @@
                 "pip install",
                 " --index-url=\"$PYPI_URL\"",
                 " --upgrade pip setuptools\n\n",
-                "# Check for cfn-bootstrap components\n",
-                "if [[ $(rpm --quiet -q aws-cfn-bootstrap)$? -eq 0 ]]\n",
-                "then\n",
-                "   echo \"Found CFn utilities via aws-cfn-bootstrap RPM.\"\n",
-                "   CFN_HUP_PATH=$(rpm -ql aws-cfn-bootstrap | grep redhat/cfn-hup)\n",
-                "else\n",
-                "   # Fix python urllib3 warnings\n",
-                "   yum -y install gcc python-devel libffi-devel openssl-devel\n",
-                "   pip install",
-                "    --index-url=\"$PYPI_URL\"",
-                "    --upgrade pyopenssl ndg-httpsclient pyasn1\n\n",
-                "   # Get cfn utils\n",
-                "   pip install",
-                "    --index-url=\"$PYPI_URL\"",
-                "    --upgrade ",
-                { "Ref": "CfnBootstrapUtilsUrl" },
-                "   \n\n",
-                "   # Remove gcc now that it is no longer needed\n",
-                "   yum -y remove gcc --setopt=clean_requirements_on_remove=1\n\n",
-                "fi\n",
-                "\n\n",
                 "# Fixup cfn utils\n",
                 "INITDIR=$(find -L /opt/aws/apitools/cfn-init/init -name redhat ",
                 "2> /dev/null || echo /usr/init/redhat)\n",
@@ -1603,16 +1629,6 @@
                 "# Add cfn-signal to path\n",
                 "hash cfn-signal 2> /dev/null || ",
                 "PATH=\"${PATH}:/usr/local/bin:/opt/aws/bin\"",
-                "\n\n",
-                "# Update cfn-bootstrapper hash method\n",
-                "printf 'Updating CFn hash-check method... '\n",
-                "PYVERS=$(python -c 'import sys ; ",
-                  "version=sys.version_info[:2]; ",
-                  "print(\"{0}.{1}\".format(*version))')\n",
-                "sed -i '/^[ \\t][ \\t]*self._etag/s/etag$/None/' ",
-                  "/usr/lib/python${PYVERS}/site-packages/cfnbootstrap",
-                  "/util.py && echo 'Success' || ",
-                  "err_exit 'Failed updating CFn hash-method'\n",
                 "\n\n",
                 "# Execute cfn-init\n",
                 "/opt/aws/bin/cfn-init -v -c launch",
