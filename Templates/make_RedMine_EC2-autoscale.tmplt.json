@@ -728,6 +728,61 @@
               }
             ]
           },
+          "cron-setup": {
+            "files": {
+              "/usr/local/sbin/EFSbackup.sh": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "#!/bin/bash\n",
+                      "#\n",
+                      "# Script to back up file-uploads S3\n",
+                      "##################################################",
+                      "##########\n",
+                      "ATTACHMENTSD=/var/www/redmine/files\n",
+                      "BKUPBUCKET=",
+                        { "Ref": "BackupBucket" },
+                        "\n",
+                      "BKUPDEST=s3://\"${BKUPBUCKET}\"/Backups/",
+                        "$(date \"+\\%A\")/files/\n",
+                      "DEBUG=${DEBUG:-0}\n",
+                      "\n",
+                      "if [[ ${DEBUG} == 0 ]]\n",
+                      "then\n",
+                      "   aws s3 sync --quiet \"${ATTACHMENTSD}\"",
+                          " \"${BKUPDEST}\" ||\n",
+                      "       echo \"One or more file failed to back",
+                              " up to S3\"\n",
+                      "else\n",
+                      "   aws s3 sync \"${ATTACHMENTSD}\" \"${BKUPDEST}\" &&\n",
+                      "     echo \"All files backed up without logged",
+                            " exceptions\" ||\n",
+                      "       echo \"One or more file failed to back up",
+                              " to S3\"\n",
+                      "fi\n"
+                    ]
+                  ],
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+                }
+              },
+              "/etc/cron.d/RMattachmentsBkup": {
+                "content": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "15 0-23/4 * * * root /usr/local/sbin/EFSbackup.sh\n"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000700",
+                "owner": "root"
+              }
+            }
+          },
           "finalize": {
             "commands": {
               "10-signal-success": {

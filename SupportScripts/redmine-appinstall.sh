@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2015
+# shellcheck disable=SC2015,SC2086
 #
 # Script to handle installation/configuration of the RedMine
 # web-application
