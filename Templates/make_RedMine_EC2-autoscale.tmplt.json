@@ -21,6 +21,11 @@
         { "Fn::Equals": [ { "Ref": "AppVolumeDevice" }, "" ] }
       ]
     },
+    "InstallCloudWatchAgent": {
+      "Fn::Not": [
+        { "Fn::Equals": [ { "Ref": "CloudWatchAgentURI" }, "" ] }
+      ]
+    },
     "InstallUpdates": {
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "NoUpdates" }, "true" ] }
@@ -241,6 +246,11 @@
       "Default": "https://bootstrap.pypa.io/get-pip.py",
       "Description": "(Optional - if AMI contains cfn-bootstrap) URL to get-pip.py",
       "Type": "String"
+    },
+    "CloudWatchAgentURI": {
+      "AllowedPattern": "^$|^http[s]?://.*$|^s3://.*$",
+      "Default": "https://s3.amazonaws.com/amazoncloudwatch-agent/linux/amd64/latest/AmazonCloudWatchAgent.zip",
+      "Description": "(Optional) URL from which to download CloudWatch Agent package."
     },
     "DbAdminName": {
       "Description": "Name of the RedMine master database-user.",
@@ -669,6 +679,69 @@
               }
             }
           },
+          "cloudwatch-agent-install": {
+            "files": {
+              "/etc/cfn/files/AmazonCloudWatchAgent.zip": {
+                "source": { "Ref": "CloudWatchAgentURI" },
+                "group": "root",
+                "mode": "000640",
+                "owner": "root"
+              },
+              "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json": {
+                "source": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      { "Ref": "RedmineHelperLocation" },
+                      "/amazon-cloudwatch-agent.json"
+                    ]
+                  ]
+                },
+                "group": "root",
+                "mode": "000640",
+                "owner": "root"
+              }
+            },
+            "commands": {
+              "0-create-agent-dir": {
+                "command": "install -d -m 000700 aws-agent",
+                "cwd": "/etc/cfn/scripts/"
+              },
+              "1-unpack-agent": {
+                "command": "unzip /etc/cfn/files/AmazonCloudWatchAgent.zip",
+                "cwd": "/etc/cfn/scripts/aws-agent",
+                "ignoreErrors": "true"
+              },
+              "2-install-agent": {
+                "command": "bash -xe install.sh",
+                "cwd": "/etc/cfn/scripts/aws-agent",
+                "ignoreErrors": "true"
+              },
+              "3-enable-agent": {
+                "command": "systemctl enable amazon-cloudwatch-agent.service",
+                "ignoreErrors": "true"
+              },
+              "4-start-agent": {
+                "command": "systemctl start amazon-cloudwatch-agent.service",
+                "ignoreErrors": "true"
+              },
+              "5-inject-custom-agent-config": {
+                "command": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "/opt/aws/amazon-cloudwatch-agent/bin/",
+                      "amazon-cloudwatch-agent-ctl",
+                      " -a fetch-config -m ec2 -c",
+                      " file:/opt/aws/amazon-cloudwatch-agent/etc/",
+                      "amazon-cloudwatch-agent.json -s"
+                    ]
+                  ]
+                },
+                "ignoreErrors": "true"
+              }
+            }
+          },
           "configSets": {
             "launch": [
               "setup",
@@ -682,6 +755,15 @@
                     "os-prep",
                     "app-install",
                     "ready-rc_local"
+                  ],
+                  { "Ref": "AWS::NoValue" }
+                ]
+              },
+              {
+                "Fn::If": [
+                  "InstallCloudWatchAgent",
+                  [
+                    "cloudwatch-agent-install"
                   ],
                   { "Ref": "AWS::NoValue" }
                 ]
