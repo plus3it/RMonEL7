@@ -83,6 +83,18 @@
             {
               "Action": [
                 "cloudwatch:PutMetricData",
+                "ec2:DescribeTags",
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogStreams",
+                "logs:PutLogEvents"
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+              "Sid": "CloudWatchAgentServerPolicy"
+            },
+            {
+              "Action": [
                 "ds:CreateComputer",
                 "ds:DescribeDirectories",
                 "ec2:DescribeInstanceStatus",
@@ -92,11 +104,7 @@
                 "ec2messages:GetEndpoint",
                 "ec2messages:GetMessages",
                 "ec2messages:SendReply",
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
                 "logs:DescribeLogGroups",
-                "logs:DescribeLogStreams",
-                "logs:PutLogEvents",
                 "ssm:DescribeAssociation",
                 "ssm:GetDeployablePatchSnapshotForInstance",
                 "ssm:GetDocument",
