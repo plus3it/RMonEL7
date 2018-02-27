@@ -167,6 +167,21 @@
     "RDSdbCluster": {
       "Properties": {
         "BackupRetentionPeriod": "7",
+        "DBClusterIdentifier": {
+          "Fn::If": [
+            "SetNodeName",
+            {
+              "Fn::Join": [
+                "-",
+                [
+                  { "Ref": "DbNodeName" },
+                  "cluster"
+                ]
+              ]
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
+        },
         "DBSubnetGroupName": { "Ref": "RDSdbSubnetGroup" },
         "DatabaseName": { "Ref": "DbInstanceName" },
         "Engine": "aurora",
