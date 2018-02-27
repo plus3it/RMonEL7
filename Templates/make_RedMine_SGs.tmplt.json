@@ -22,7 +22,7 @@
       "AllowedPattern": "^vpc-[0-9a-f]*$",
       "Description": "ID of the VPC to deploy RedMine components into.",
       "Type": "AWS::EC2::VPC::Id"
-    },
+    }
   },
   "Resources": {
     "RdsSg": {
