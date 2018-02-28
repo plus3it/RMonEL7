@@ -1418,6 +1418,7 @@
                     [
                       "watchmaker --log-level debug",
                       " --log-dir /var/log/watchmaker",
+                      " --exclude-states scap*scan",
                       " --no-reboot",
                       {
                         "Fn::If": [
