@@ -25,7 +25,7 @@
     },
     "UseDbSnapshot": {
       "Fn::Not": [
-        { "Fn::Equals": [ { "Ref": "DbSnapshotId" }, "true" ] }
+        { "Fn::Equals": [ { "Ref": "DbSnapshotId" }, "" ] }
       ]
     }
   },
