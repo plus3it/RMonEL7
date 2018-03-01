@@ -13,6 +13,7 @@ do
    # shellcheck disable=SC2163
    export "${RMENV}"
 done < /etc/cfn/RedMine.envs
+RMDLSRC="${RMDLSRC:-http://www.redmine.org/releases}"
 RMVERS="${RM_BIN_VERS}"
 RECONSURI="${RM_HELPER_ROOT_URL}"
 
@@ -124,7 +125,7 @@ fi
 
 # Grab and stage RedMine archive
 (
-  cd /tmp && curl -L http://www.redmine.org/releases/"${RMVERS}".tar.gz | \
+  cd /tmp && curl -L "${RMDLSRC}"/"${RMVERS}".tar.gz | \
   tar zxvf -
 )
 
