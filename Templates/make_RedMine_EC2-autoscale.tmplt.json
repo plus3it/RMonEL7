@@ -1017,7 +1017,7 @@
                       "echo 'echo Enabling miscellaneous plugins | ",
                       "tee -a /var/log/rc_local.log' >> ",
                       "/etc/rc.d/rc.local\n",
-                      "echo 'bash -xe ",
+                      "echo 'bash -x ",
                       "/etc/cfn/scripts/plugins.sh 2>&1 | ",
                       "tee -a /var/log/rc_local.log' >> ",
                       "/etc/rc.d/rc.local\n"
