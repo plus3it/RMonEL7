@@ -15,8 +15,9 @@ DBHOST="${RM_DB_FQDN}"
 DBINST="${RM_DB_INSTANCE_NAME}"
 DBUSER="${RM_DB_ADMIN_NAME}"
 DBPASS="${RM_DB_ADMIN_PASS}"
+# shellcheck disable=SC1078
 SQLCMD="mysql -u ${RM_DB_ADMIN_NAME} -h ${RM_DB_FQDN}
-        --password="${RM_DB_ADMIN_PASS}" ${RM_DB_INSTANCE_NAME}"
+        --password=${RM_DB_ADMIN_PASS} ${RM_DB_INSTANCE_NAME}"
 EMPTYDB=$(echo "show tables" | ${SQLCMD})
 
 # Need to set this lest the default umask make our lives miserable
@@ -29,6 +30,7 @@ umask 022
 ##########################################################
 printf "Ensure local DB is running... "
 systemctl restart mariadb && echo "Success." || echo "Failure."
+# shellcheck disable=SC2181
 if [[ $? -eq 0 ]]
 then
    printf "Creating (temporary) config-DB..."
@@ -41,7 +43,7 @@ fi
 
 # Ruby-based RedMine setup tasks here
 echo "Running ruby-gem tasks..."
-( cd /var/www/redmine 
+( cd /var/www/redmine && \
   gem install bundler --no-rdoc --no-ri && \
   bundle install --without development test postgresql sqlite && \
   bundle exec rake generate_secret_token && \
@@ -66,5 +68,5 @@ systemctl disable mariadb
 
 # Point RedMine to RDS
 printf "Redirecting RedMine database config to point to remote DB... "
-sed -i '/host:/s/localhost/'${DBHOST}'/' \
+sed -i '/host:/s/localhost/'"${DBHOST}"'/' \
   /var/www/redmine/config/database.yml && echo "Success" || echo "Failed"
