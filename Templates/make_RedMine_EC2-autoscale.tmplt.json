@@ -952,6 +952,8 @@
                   "Fn::Join": [
                     "",
                     [
+                      "echo 'echo sourcing SCL Ruby24 envs' >> ",
+                      "/etc/rc.d/rc.local\n",
                       "echo 'source /etc/profile.d/enable_rh-ruby24.sh' >> ",
                       "/etc/rc.d/rc.local\n"
                     ]
@@ -963,6 +965,8 @@
                   "Fn::Join": [
                     "",
                     [
+                      "echo 'echo Running initial ruby-gem tasks' >> ",
+                      "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/GemStuff.sh 2>&1 | ",
                       "tee -a /var/log/rc_local.log' >> ",
@@ -976,6 +980,8 @@
                   "Fn::Join": [
                     "",
                     [
+                      "echo 'echo Configuring Passenger or Apache' >> ",
+                      "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/Passenger_conf.sh 2>&1 | ",
                       "tee -a /var/log/rc_local.log' >> ",
@@ -989,6 +995,8 @@
                   "Fn::Join": [
                     "",
                     [
+                      "echo 'echo Enabling git_remote plugin' >> ",
+                      "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/git_remote.sh 2>&1 | ",
                       "tee -a /var/log/rc_local.log' >> ",
@@ -1002,6 +1010,8 @@
                   "Fn::Join": [
                     "",
                     [
+                      "echo 'echo Enabling miscellaneous plugins' >> ",
+                      "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/plugins.sh 2>&1 | ",
                       "tee -a /var/log/rc_local.log' >> ",
@@ -1015,6 +1025,8 @@
                   "Fn::Join": [
                     "",
                     [
+                      "echo 'echo Disabling further re-runs of rc.local' >> ",
+                      "/etc/rc.d/rc.local\n",
                       "echo 'chmod a-x /etc/rc.d/rc.local' >> ",
                       "/etc/rc.d/rc.local\n"
                     ]
