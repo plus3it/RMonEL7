@@ -952,7 +952,8 @@
                   "Fn::Join": [
                     "",
                     [
-                      "echo 'echo sourcing SCL Ruby24 envs' >> ",
+                      "echo 'echo sourcing SCL Ruby24 envs | ",
+                      "tee -a /var/log/rc_local.log' >> ",
                       "/etc/rc.d/rc.local\n",
                       "echo 'source /etc/profile.d/enable_rh-ruby24.sh' >> ",
                       "/etc/rc.d/rc.local\n"
@@ -965,7 +966,8 @@
                   "Fn::Join": [
                     "",
                     [
-                      "echo 'echo Running initial ruby-gem tasks' >> ",
+                      "echo 'echo Running initial ruby-gem tasks | ",
+                      "tee -a /var/log/rc_local.log' >> ",
                       "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/GemStuff.sh 2>&1 | ",
@@ -980,7 +982,8 @@
                   "Fn::Join": [
                     "",
                     [
-                      "echo 'echo Configuring Passenger or Apache' >> ",
+                      "echo 'echo Configuring Passenger or Apache | ",
+                      "tee -a /var/log/rc_local.log' >> ",
                       "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/Passenger_conf.sh 2>&1 | ",
@@ -995,7 +998,8 @@
                   "Fn::Join": [
                     "",
                     [
-                      "echo 'echo Enabling git_remote plugin' >> ",
+                      "echo 'echo Enabling git_remote plugin | ",
+                      "tee -a /var/log/rc_local.log' >> ",
                       "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/git_remote.sh 2>&1 | ",
@@ -1010,7 +1014,8 @@
                   "Fn::Join": [
                     "",
                     [
-                      "echo 'echo Enabling miscellaneous plugins' >> ",
+                      "echo 'echo Enabling miscellaneous plugins | ",
+                      "tee -a /var/log/rc_local.log' >> ",
                       "/etc/rc.d/rc.local\n",
                       "echo 'bash -xe ",
                       "/etc/cfn/scripts/plugins.sh 2>&1 | ",
