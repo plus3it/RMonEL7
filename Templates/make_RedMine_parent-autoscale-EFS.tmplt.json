@@ -11,6 +11,7 @@
           "Parameters": [
             "SgTemplateUri",
             "EfsTemplateUri",
+            "ElbTemplate",
             "RdsTemplateUri",
             "BucketTemplateUri",
             "IamTemplateUri",
@@ -35,14 +36,25 @@
             "PrivateIp",
             "NoReboot",
             "NoUpdates",
+            "DesiredCapacity",
+            "MaxCapacity",
+            "MinCapacity",
+            "ToggleCfnInitUpdate",
+            "ToggleNewInstances"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Watchmaker-related Parameters"
+          },
+          "Parameters": [
             "EpelRepo",
             "PipRpm",
             "PyStache",
             "PipIndexFips",
+            "WatchmakerEnvironment",
             "WatchmakerConfig",
-            "DesiredCapacity",
-            "MaxCapacity",
-            "MinCapacity"
+            "WatchmakerS3Source"
           ]
         },
         {
@@ -51,12 +63,13 @@
           },
           "Parameters": [
             "DbInstanceType",
-            "InstanceCount",
+            "DbInstanceCount",
             "DbDataSize",
             "DbNodeName",
             "DbInstanceName",
             "DbAdminName",
-            "DbAdminPass"
+            "DbAdminPass",
+            "DbSnapshotId"
           ]
         },
         {
@@ -70,6 +83,17 @@
             "RedmineHelperLocation",
             "RedmineProxyFqdn",
             "RedmineSharePath"
+          ]
+        },
+        {
+          "Label": {
+            "default": "Elb Parameters"
+          },
+          "Parameters": [
+            "ProxyPrettyName",
+            "RedmineListenerCert",
+            "BackendTimeout",
+            "PublicSubnets"
           ]
         },
         {
@@ -190,6 +214,11 @@
     },
     "DbNodeName": {
       "Description": "NodeName of the RedMine database.",
+      "Type": "String"
+    },
+    "DbSnapshotId": {
+      "AllowedPattern": "^$|^arn:.*$",
+      "Description": "(Optional) RDS snapshot-ARN to clone new database from.",
       "Type": "String"
     },
     "DesiredCapacity": {
@@ -612,6 +641,7 @@
           "DbSecurityGroup": {
             "Fn::GetAtt": [ "SgRes", "Outputs.RdsSg" ]
           },
+          "DbSnapshotId": { "Ref": "DbSnapshotId" },
           "DbSubnets": {
             "Fn::Join": [
               ",",

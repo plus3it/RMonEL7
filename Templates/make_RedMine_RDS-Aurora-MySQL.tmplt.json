@@ -22,6 +22,11 @@
     },
     "SetNodeName": {
       "Fn::Not": [ { "Fn::Equals": [ { "Ref": "DbNodeName" }, "" ] } ]
+    },
+    "UseDbSnapshot": {
+      "Fn::Not": [
+        { "Fn::Equals": [ { "Ref": "DbSnapshotId" }, "" ] }
+      ]
     }
   },
   "Description": "This template deploys a MySQL-flavored Aurora database to support RedMine.",
@@ -117,6 +122,11 @@
       "Description": "List of security groups to apply to the RDS database.",
       "Type": "List<AWS::EC2::SecurityGroup::Id>"
     },
+    "DbSnapshotId": {
+      "AllowedPattern": "^$|^arn:.*$",
+      "Description": "(Optional) RDS snapshot-ARN to clone new database from.",
+      "Type": "String"
+    },
     "DbSubnets": {
       "Description": "Select at least two subnets, each in different Availability Zones",
       "Type": "List<AWS::EC2::Subnet::Id>"
@@ -167,14 +177,42 @@
     "RDSdbCluster": {
       "Properties": {
         "BackupRetentionPeriod": "7",
+        "DBClusterIdentifier": {
+          "Fn::If": [
+            "SetNodeName",
+            {
+              "Fn::Join": [
+                "-",
+                [
+                  { "Ref": "DbNodeName" },
+                  "cluster"
+                ]
+              ]
+            },
+            { "Ref": "AWS::NoValue" }
+          ]
+        },
         "DBSubnetGroupName": { "Ref": "RDSdbSubnetGroup" },
         "DatabaseName": { "Ref": "DbInstanceName" },
         "Engine": "aurora",
         "MasterUserPassword": { "Ref": "DbAdminPass" },
-        "MasterUsername": { "Ref": "DbAdminName" },
+        "MasterUsername": {
+          "Fn::If": [
+            "UseDbSnapshot",
+            { "Ref": "AWS::NoValue" },
+            { "Ref": "DbAdminName" }
+          ]
+        },
         "Port": "3306",
         "PreferredBackupWindow": "04:30-06:30",
         "PreferredMaintenanceWindow": "tue:07:00-tue:09:00",
+        "SnapshotIdentifier": {
+          "Fn::If": [
+            "UseDbSnapshot",
+            { "Ref": "DbSnapshotId" },
+            { "Ref": "AWS::NoValue" }
+          ]
+        },
         "Tags": [
           {
             "Key": "Description",

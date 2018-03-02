@@ -37,6 +37,7 @@
       "DependsOn": "RdsSg",
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
+        "Description": "Exceptions for MySQL over 3306/tcp",
         "GroupId": { "Ref": "RdsSg" },
         "SourceSecurityGroupId": { "Ref": "RdsSg" },
         "IpProtocol": "tcp",
@@ -52,15 +53,52 @@
         "VpcId": { "Ref": "TargetVPC" }
       }
     },
-    "UpdateNasSg": {
+    "UpdateNasSgRpcbindTcp": {
       "DependsOn": "NasSg",
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
+        "Description": "Exceptions for rpcbind over TCP",
         "GroupId": { "Ref": "NasSg" },
         "SourceSecurityGroupId": { "Ref": "NasSg" },
         "IpProtocol": "tcp",
-        "FromPort": "0",
-        "ToPort": "65535"
+        "FromPort": "111",
+        "ToPort": "111"
+      }
+    },
+    "UpdateNasSgRpcbindUdp": {
+      "DependsOn": "NasSg",
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "Description": "Exceptions for rpcbind over UDP",
+        "GroupId": { "Ref": "NasSg" },
+        "SourceSecurityGroupId": { "Ref": "NasSg" },
+        "IpProtocol": "udp",
+        "FromPort": "111",
+        "ToPort": "111"
+      }
+    },
+    "UpdateNasSgNfsdTcp": {
+      "DependsOn": "NasSg",
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "Description": "Exceptions for nfsd over TCP",
+        "GroupId": { "Ref": "NasSg" },
+        "SourceSecurityGroupId": { "Ref": "NasSg" },
+        "IpProtocol": "tcp",
+        "FromPort": "2049",
+        "ToPort": "2049"
+      }
+    },
+    "UpdateNasSgNfsdUdp": {
+      "DependsOn": "NasSg",
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "Description": "Exceptions for nfsd over UDP",
+        "GroupId": { "Ref": "NasSg" },
+        "SourceSecurityGroupId": { "Ref": "NasSg" },
+        "IpProtocol": "udp",
+        "FromPort": "2049",
+        "ToPort": "2049"
       }
     },
     "AppSg": {
@@ -69,18 +107,7 @@
         "GroupDescription": "Application access-ports Security Group",
         "SecurityGroupIngress": [
           {
-            "IpProtocol": "tcp",
-            "FromPort": "22",
-            "ToPort": "22",
-            "CidrIp": "0.0.0.0/0"
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "80",
-            "ToPort": "80",
-            "CidrIp": "0.0.0.0/0"
-          },
-          {
+            "Description": "Allow unfettered HTTPS from public clients",
             "IpProtocol": "tcp",
             "FromPort": "443",
             "ToPort": "443",
@@ -95,11 +122,12 @@
       "DependsOn": "AppSg",
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
+        "Description": "Allow unfettered HTTP between ELB and EC2",
         "GroupId": { "Ref": "AppSg" },
         "SourceSecurityGroupId": { "Ref": "AppSg" },
         "IpProtocol": "tcp",
-        "FromPort": "0",
-        "ToPort": "65535"
+        "FromPort": "80",
+        "ToPort": "80"
       }
     }
   }
