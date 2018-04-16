@@ -428,7 +428,7 @@
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
       "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
       "Type": "String"
-    },
+    }, 
     "RedmineProxyFqdn": {
       "Description": "Fully-qualified domainname of the RedMine reverse-proxy host.",
       "Type": "String"
