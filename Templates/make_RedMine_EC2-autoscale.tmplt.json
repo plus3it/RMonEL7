@@ -1342,8 +1342,6 @@
                       "PYPI_URL=",
                       { "Ref": "PypiIndexUrl" },
                       "\n",
-                      "pip install --index-url=\"$PYPI_URL\" wheel",
-                      "\n",
                       "pip install",
                       " --index-url=\"$PYPI_URL\"",
                       " --upgrade pip setuptools boto3 watchmaker\n\n"
