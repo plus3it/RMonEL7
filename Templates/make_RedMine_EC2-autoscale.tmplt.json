@@ -1344,7 +1344,7 @@
                       "\n",
                       "pip install",
                       " --index-url=\"$PYPI_URL\"",
-                      " --upgrade pip setuptools boto3 watchmaker\n\n"
+                      " --upgrade pip<10 setuptools boto3 watchmaker\n\n"
                     ]
                   ]
                 },
