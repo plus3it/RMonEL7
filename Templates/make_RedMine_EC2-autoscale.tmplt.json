@@ -237,7 +237,7 @@
     },
     "CfnEndpointUrl": {
       "AllowedPattern": "^$|^http[s]?://.*$",
-      "Default": "https://cloudformation.us-east-1.amazonaws.com", 
+      "Default": "https://cloudformation.us-east-1.amazonaws.com",
       "Description": "(Optional) URL to the CloudFormation Endpoint. e.g. https://cloudformation.us-east-1.amazonaws.com",
       "Type": "String"
     },
@@ -428,7 +428,7 @@
       "AllowedPattern": "^$|^http://.*$|^https://.*$",
       "Description": "URL to script that prepares the EC2 instance for a RedMine install.",
       "Type": "String"
-    }, 
+    },
     "RedmineProxyFqdn": {
       "Description": "Fully-qualified domainname of the RedMine reverse-proxy host.",
       "Type": "String"
@@ -1342,7 +1342,7 @@
                       "PYPI_URL=",
                       { "Ref": "PypiIndexUrl" },
                       "\n",
-                      "pip install --index-url=\"$PYPI_URL\" wheel==0.29.0\n",
+                      "pip install --index-url=\"$PYPI_URL\" wheel\n",
                       "pip install",
                       " --index-url=\"$PYPI_URL\"",
                       " --upgrade pip setuptools boto3 watchmaker\n\n"

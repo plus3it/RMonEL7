@@ -630,7 +630,7 @@
                       "PYPI_URL=",
                       { "Ref": "PipIndexFips" },
                       "\n",
-                      "pip install --index-url=\"$PYPI_URL\" wheel==0.29.0\n",
+                      "pip install --index-url=\"$PYPI_URL\" wheel\n",
                       "pip install",
                       " --index-url=\"$PYPI_URL\"",
                       " --upgrade pip setuptools boto3 watchmaker\n\n"
