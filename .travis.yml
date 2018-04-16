@@ -4,13 +4,6 @@ env:
     - LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
     - SEGFAULT_SIGNALS=all
 
-addons:
-  apt:
-    sources:
-      - debian-sid    # Grab ShellCheck from the Debian repo
-    packages:
-      - shellcheck
-
 matrix:
   include:
     - env:
@@ -24,11 +17,6 @@ matrix:
 before_install:
   - echo $TESTCOMMAND
   - shellcheck --version
-
-install:
-  # Download json parser
-  - curl -sO http://stedolan.github.io/jq/download/linux64/jq
-  - chmod +x $PWD/jq
 
 script:
   - bash -c "$TESTCOMMAND"
