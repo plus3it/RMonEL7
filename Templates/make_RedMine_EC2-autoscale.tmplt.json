@@ -1344,7 +1344,7 @@
                       "\n",
                       "pip install",
                       " --index-url=\"$PYPI_URL\"",
-                      " --upgrade pip<10 setuptools boto3 watchmaker\n\n"
+                      " --upgrade 'pip<10' setuptools boto3 watchmaker\n\n"
                     ]
                   ]
                 },
@@ -1764,7 +1764,7 @@
                 "\n",
                 "pip install",
                 " --index-url=\"$PYPI_URL\"",
-                " --upgrade pip setuptools\n\n",
+                " --upgrade 'pip<10' setuptools\n\n",
                 "# Fixup cfn utils\n",
                 "INITDIR=$(find -L /opt/aws/apitools/cfn-init/init -name redhat ",
                 "2> /dev/null || echo /usr/init/redhat)\n",

@@ -632,7 +632,7 @@
                       "\n",
                       "pip install",
                       " --index-url=\"$PYPI_URL\"",
-                      " --upgrade pip<10 setuptools boto3 watchmaker\n\n"
+                      " --upgrade 'pip<10' setuptools boto3 watchmaker\n\n"
                     ]
                   ]
                 },
@@ -1253,7 +1253,7 @@
                 { "Ref": "PipIndexFips" },
                 "\n",
                 "    pip install --index-url=\"$PYPI_URL\"",
-                " --upgrade pip setuptools\n\n",
+                " --upgrade 'pip<10' setuptools\n\n",
                 "    # Update cfn-bootstrapper hash method\n",
                 "    printf 'Updating CFn hash-check method... '\n",
                 "    PYVERS=$(python -c 'import sys;",
