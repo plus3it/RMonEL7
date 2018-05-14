@@ -88,6 +88,34 @@
       "Fn::Not": [
         { "Fn::Equals": [ { "Ref": "WatchmakerConfig" }, "" ] }
       ]
+    },
+    "UseScheduledAction": {
+        "Fn::And": [
+            {
+                "Fn::Not": [
+                    {
+                        "Fn::Equals": [
+                            {
+                                "Ref": "ScaleUpSchedule"
+                            },
+                            ""
+                        ]
+                    }
+                ]
+            },
+            {
+                "Fn::Not": [
+                    {
+                        "Fn::Equals": [
+                            {
+                                "Ref": "ScaleDownSchedule"
+                            },
+                            ""
+                        ]
+                    }
+                ]
+            }
+        ]
     }
   },
   "Description": "This template creates an Autoscaling Group and Launch Configuration to deploy STIG-hardened Enterprise Linux 7 instances to host the RedMine service's web-tier.",
@@ -131,7 +159,10 @@
             "AppVolumeType",
             "NoPublicIp",
             "ToggleNewInstances",
-            "CfnEndpointUrl"
+            "CfnEndpointUrl",
+            "ScaleDownDesiredCapacity",
+            "ScaleDownSchedule",
+            "ScaleUpSchedule"
           ]
         },
         {
@@ -356,7 +387,7 @@
       "Type": "Number"
     },
     "MinCapacity": {
-      "Default": "1",
+      "Default": "0",
       "Description": "Minimum number of instances in the Autoscaling Group",
       "Type": "Number"
     },
@@ -446,6 +477,21 @@
       "Description": "Type of network share hosting shared RedMine content.",
       "Type": "String"
     },
+    "ScaleDownDesiredCapacity": {
+        "Default": "0",
+        "Description": "(Optional) Desired number of instances during the Scale Down Scheduled Action; ignored if ScaleDownSchedule is unset",
+        "Type": "Number"
+    },
+    "ScaleDownSchedule": {
+        "Default": "",
+        "Description": "(Optional) Scheduled Action in cron-format (UTC) to scale down the number of instances; ignored if empty or ScaleUpSchedule is unset (E.g. \"0 0 * * *\")",
+        "Type": "String"
+    },
+    "ScaleUpSchedule": {
+        "Default": "",
+        "Description": "(Optional) Scheduled Action in cron-format (UTC) to scale up to the Desired Capacity; ignored if empty or ScaleDownSchedule is unset (E.g. \"0 10 * * Mon-Fri\")",
+        "Type": "String"
+      },
     "SecurityGroupIds": {
       "Description": "List of security groups to apply to the instance(s)",
       "Type": "List<AWS::EC2::SecurityGroup::Id>"
@@ -547,7 +593,7 @@
       "UpdatePolicy": {
         "AutoScalingRollingUpdate": {
           "MaxBatchSize": "2",
-          "MinInstancesInService": "1",
+          "MinInstancesInService": "0",
           "PauseTime": "PT15M",
           "WaitOnResourceSignals": "true"
         }
@@ -1870,6 +1916,36 @@
         }
       },
       "Type": "AWS::AutoScaling::LaunchConfiguration"
+    },
+    "ScaleDownScheduledAction": {
+        "Condition": "UseScheduledAction",
+        "Properties": {
+            "AutoScalingGroupName": {
+                "Ref": "RedMineASG"
+            },
+            "DesiredCapacity": {
+                "Ref": "ScaleDownDesiredCapacity"
+            },
+            "Recurrence": {
+                "Ref": "ScaleDownSchedule"
+            }
+        },
+        "Type": "AWS::AutoScaling::ScheduledAction"
+    },
+    "ScaleUpScheduledAction": {
+        "Condition": "UseScheduledAction",
+        "Properties": {
+            "AutoScalingGroupName": {
+                "Ref": "RedMineASG"
+            },
+            "DesiredCapacity": {
+                "Ref": "MaxCapacity"
+            },
+            "Recurrence": {
+                "Ref": "ScaleUpSchedule"
+            }
+        },
+        "Type": "AWS::AutoScaling::ScheduledAction"
     }
   }
 }
