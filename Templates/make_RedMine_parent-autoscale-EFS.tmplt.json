@@ -40,7 +40,10 @@
             "MaxCapacity",
             "MinCapacity",
             "ToggleCfnInitUpdate",
-            "ToggleNewInstances"
+            "ToggleNewInstances",
+            "ScaleDownDesiredCapacity",
+            "ScaleDownSchedule",
+            "ScaleUpSchedule"
           ]
         },
         {
@@ -308,7 +311,7 @@
       "Type": "Number"
     },
     "MinCapacity": {
-      "Default": "1",
+      "Default": "0",
       "Description": "Minimum number of instances in the Autoscaling Group",
       "Type": "Number"
     },
@@ -421,6 +424,21 @@
       "Description": "Prefix to apply to IAM role to make things a bit prettier (optional).",
       "Type": "String"
     },
+    "ScaleDownDesiredCapacity": {
+        "Default": "0",
+        "Description": "(Optional) Desired number of instances during the Scale Down Scheduled Action; ignored if ScaleDownSchedule is unset",
+        "Type": "Number"
+    },
+    "ScaleDownSchedule": {
+        "Default": "",
+        "Description": "(Optional) Scheduled Action in cron-format (UTC) to scale down the number of instances; ignored if empty or ScaleUpSchedule is unset (E.g. \"0 0 * * *\")",
+        "Type": "String"
+    },
+    "ScaleUpSchedule": {
+        "Default": "",
+        "Description": "(Optional) Scheduled Action in cron-format (UTC) to scale up to the Desired Capacity; ignored if empty or ScaleDownSchedule is unset (E.g. \"0 10 * * Mon-Fri\")",
+        "Type": "String"
+      },
     "ServiceTld": {
       "Default": "amazonaws.com",
       "Description": "TLD of the IAMable service-name.",
@@ -525,7 +543,7 @@
           "InstanceType": { "Ref": "InstanceType" },
           "KeyPairName": { "Ref": "KeyPairName" },
           "MaxCapacity": "2",
-          "MinCapacity": "1",
+          "MinCapacity": "0",
           "NoPublicIp": "true",
           "NoReboot": "false",
           "NoUpdates": { "Ref": "NoUpdates" },
@@ -547,6 +565,9 @@
             ]
           },
           "RedmineShareType": "nfs",
+          "ScaleDownDesiredCapacity": { "Ref": "ScaleDownDesiredCapacity"},
+          "ScaleDownSchedule": { "Ref": "ScaleDownSchedule"},
+          "ScaleUpSchedule": { "Ref": "ScaleUpSchedule"},
           "SecurityGroupIds": {
             "Fn::Join": [
               ",",
@@ -562,7 +583,7 @@
               ",",
               { "Ref": "ProtectedSubnets" }
             ]
-          }, 
+          },
           "ToggleCfnInitUpdate": { "Ref": "ToggleCfnInitUpdate" },
           "ToggleNewInstances": { "Ref": "ToggleNewInstances" },
           "WatchmakerConfig": { "Ref": "WatchmakerConfig" },

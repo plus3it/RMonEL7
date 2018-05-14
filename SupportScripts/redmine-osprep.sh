@@ -302,4 +302,3 @@ systemctl restart httpd && logit success || \
 
 # Try to activate epel as needed
 NeedEpel
-

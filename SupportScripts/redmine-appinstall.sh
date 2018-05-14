@@ -123,6 +123,9 @@ else
    curl -s -L "${RECONSURI}"/main_cf.sh | /bin/bash -
 fi
 
+#Restart autofs
+systemctl restart autofs
+
 # Grab and stage RedMine archive
 (
   cd /tmp && curl -L "${RMDLSRC}"/"${RMVERS}".tar.gz | \
